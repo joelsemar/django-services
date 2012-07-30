@@ -1,0 +1,117 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <script type='application/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js'>
+        </script>
+        {% include 'doc_css.html' %}
+        {% include 'doc_javascript.html' %}
+    </head>
+    <body>
+        <a name='top'><h1>{{servername}} API Documentation</h1></a>
+        Developer: {{developer_email}}
+        <br/>
+        Try calls in the <a href='/console'>API Console</a>
+        <br/>
+        
+        please check out the notes on data formats and return values <a href="#dataformats" onclick ='load_handler("#dataformats");'>here.</a>
+        Read <a href="#status_codes" onclick ='load_handler("#status_codes");'>here</a>
+        to see a list of the HTTP Status codes you may encounter.
+        <br/>
+        <button onclick="run_all_tests()">
+            Run Available Tests
+        </button>
+        {% if changelog_entries %}<h2><a name='changelog'>Recent API Changes:</a></h2>
+        <div id='table_outer'>
+            <table width='100%'>
+                <tr>
+                    <td height="20px">
+                        <b>Description</b>
+                    </td>
+                    <td height="20px">
+                        <b>Time</b>
+                    </td>
+                    <td height="20px">
+                        <b>By</b>
+                    </td>
+                </tr>
+                {% for entry in changelog_entries %}
+                <tr>
+                    <td height="20px">
+                        {{entry.description}}
+                    </td>
+                    <td height="20px">
+                        {{entry.when_created}} (UTC/GMT)
+                    </td>
+                    <td height="20px">
+                        {{entry.entered_by}}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endif %}
+        <div id="main">
+            {% for handler in handlers %}<a name='{{handler.name}}'></a>
+            {% endfor %} 
+            <div id="nav_menu">
+                <h2>Resources</h2>
+                <hr/>
+                <ul>
+                    {% for handler in handlers %}
+                    <li href='#{{handler.name}}' onclick='expand_methods("#{{handler.name}}");'>
+                        <a href='#{{handler.name}}' onclick='expand_methods("#{{handler.name}}");' id="{{handler.name}}_link">
+                            <div class="menuitem">
+                                {{handler.name}}
+                                <div class='methodlist' id='{{handler.name}}_methods' style='display:none'>
+                                    {% for method in handler.methods %}
+                                    <div class="methoditem">
+                                        <a href='#{{handler.name}}_{{method.request_method}}' onclick='load_handler("#{{handler.name}}_{{method.request_method}}");'>{{method.request_method}}</a>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <h2>General Info</h2>
+                <ul>
+                    <li>
+                        <a href="#dataformats" onclick ='load_handler("#dataformats");'>
+                            <div class="menuitem">
+                                Data formats and return values
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#status_codes" onclick ='load_handler("#status_codes");'>
+                            <div class="menuitem">
+                                HTTP Status Codes
+                            </div>
+                        </a>
+                    </li>
+					<li>
+                        <a href="#paging" onclick ='load_handler("#paging");'>
+                            <div class="menuitem">
+                                Paging
+                            </div>
+                        </a>
+                    </li>
+					
+                </ul>
+            </div>
+            <div id="dynamic_docs">
+                {% for curhandler in handlers %}
+                {% with curhandler as handler %}
+                {% include 'handler_doc.html' %}
+                {% endwith %}
+                {% endfor %}
+                {% include 'other_info_divs.html' %}
+                
+            </div>
+        </div>
+        
+    
+
+    </body>
+</html>
