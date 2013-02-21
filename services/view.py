@@ -1,17 +1,16 @@
 from django.core import serializers
 import simplejson
-from django import dispatch
-from django.core.serializers.json import DateTimeAwareJSONEncoder
+import logging
 from django.http import HttpResponse
 
 from django.conf import settings
 from django.core.paginator import EmptyPage, Paginator
 
-JSON_INDENT = 4 if settings.DEBUG else 0
+JSON_INDENT = 4
 
 JSONSerializer = serializers.get_serializer('json')
 
-message_sent = dispatch.Signal(providing_args=['message'])
+logger = logging.getLogger('default')
 
 class BaseView(object):
     """
@@ -27,13 +26,10 @@ class BaseView(object):
         self.doc = None
         self.headers = {}
 
-        if self._request:
-            message_sent.connect(self.message_callback, sender=None, dispatch_uid='response_receiver')
 
     def set_headers(self, headers):
         for k, v in headers.items():
             self.headers[k] = v
-
 
     def add_errors(self, errors, status=400):
 
@@ -53,13 +49,6 @@ class BaseView(object):
                 self._errors.append(error)
             return
         raise TypeError("Argument 'errors' must be of type 'string' or 'list'")
-
-
-    def message_callback(self, signal, sender, **kwargs):
-        message = kwargs.get('message', '')
-        if self._request.user.id == sender.id:
-            self.add_messages(message)
-
 
     def add_messages(self, messages):
         if isinstance(messages, basestring):
@@ -87,27 +76,40 @@ class BaseView(object):
     def get(self, key):
         return self._data[key]
 
-    def setStatus(self, status):
+    def set_status(self, status):
         assert isinstance(status, int)
         self._status = status
 
     def render(self, request):
         return self._data
 
+    def render_summary(self, request):
+        ret = {'session_key': request.session.session_key,
+               'path': request.get_full_path(),
+               'method': request.method,
+               'body': request.raw_post_body}
+
+        if request.user.is_authenticated():
+            ret['user_id'] = request.user.get_profile().id
+
+        ret['body_summary'] = self.get_body_summary(request)
+
+        return ret
 
     def access_denied(self):
-        return self.send("ACCESS DENIED", status=401)
+        return self.add_errors("ACCESS DENIED", status=401)
 
     def bad_request(self):
-        return self.send("BAD REQUEST", status=400)
+        return self.add_errors("BAD REQUEST", status=400)
 
-    def send(self, messages=None, errors=None, status=None):
+    def serialize(self, messages=None, errors=None, status=None):
+        from services.utils import DateTimeAwareJSONEncoder
 
         if errors:
             self.add_errors(errors)
 
         if status:
-            self.setStatus(status)
+            self.set_status(status)
 
         if messages:
             self.add_messages(messages)
@@ -118,12 +120,15 @@ class BaseView(object):
         response_dict['success'] = self.success
 
         if self._messages:
-            response_dict['messages'] = messages
+            response_dict['messages'] = self._messages
 
         if self.doc:
             response_dict['doc'] = self.doc
 
-        response_body = simplejson.dumps(response_dict, cls=DateTimeAwareJSONEncoder, indent=JSON_INDENT)
+        if settings.DEBUG or self._request.REQUEST.get('pretty_print'):
+            response_body = simplejson.dumps(response_dict, cls=DateTimeAwareJSONEncoder, indent=JSON_INDENT)
+        else:
+            response_body = simplejson.dumps(response_dict, cls=DateTimeAwareJSONEncoder)
         http_response = HttpResponse(response_body, status=self._status)
         http_response['Content-Type'] = 'application/json'
         return http_response
@@ -166,12 +171,17 @@ class ModelView(BaseView):
     def render_instance(cls, instance, request):
         """A Helper method so QuerySet Views can make use of the instance's ModelView"""
 
-        view = cls()
+
+        view = cls(request=request)
         view.set(instance=instance)
         return view.render(request)
 
 
 class QuerySetView(BaseView):
+    model_view = ModelView
+    paging = False
+    queryset_label = 'results'
+
     @property
     def queryset(self):
         return self._data.get('queryset', None)
@@ -190,41 +200,42 @@ class QuerySetView(BaseView):
 
         if self.paging:
             results, paging_dict = self.auto_page(ret, page_number=request.GET.get('page_number', 1), limit=request.GET.get('limit', 20))
-            return {'results': results, 'paging': paging_dict}
+            return {self.queryset_label: results, 'paging': paging_dict}
 
-        return {'results': ret}
+        return {self.queryset_label: ret}
 
     def sort(self, results, request):
         return results
 
     def auto_page(self, results, page_number=1, limit=10):
+
         try:
             page_number = int(page_number)
             limit = int(limit)
         except ValueError:
             page_number = 1
             limit = 10
-            
+
         pages = Paginator(results, limit)
         try:
             page = pages.page(page_number)
         except EmptyPage:
             page = pages.page(1)
-        
+
         results = page.object_list
-        
+
         try:
             pages.page(page.next_page_number())
             next_page = page.next_page_number()
         except EmptyPage:
             next_page = None
-        
+
         try:
             pages.page(page.previous_page_number())
             previous_page = page.previous_page_number()
         except EmptyPage:
             previous_page = None
-            
+
         page_dict = {'page': page_number,
                     'next_page': next_page,
                     'previous_page': previous_page,

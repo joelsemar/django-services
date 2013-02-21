@@ -7,6 +7,7 @@ import types
 import urllib
 import urllib2
 import xml.sax.handler
+import math
 
 from django.db import transaction
 from django.contrib.gis.geos import fromstr
@@ -14,7 +15,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.core.serializers.json import DjangoJSONEncoder
 
-from services.view import BaseView as JSONResponse
+from services.view import BaseView
 import requests
 
 GOOGLE_REVERSE_URL = 'http://maps.googleapis.com/maps/api/geocode/json?sensor=false'
@@ -51,7 +52,10 @@ class GeoCode():
 
     def get_coords(self):
         response = self._make_call()
-        coordinates = response['Placemark'][0]['Point']['coordinates'][0:2]
+        try:
+           coordinates = response['Placemark'][0]['Point']['coordinates'][0:2]
+        except KeyError:
+            raise GeoCodeError
         return tuple([float(n) for n in coordinates])
 
 
@@ -65,18 +69,34 @@ def friendly_url_encode(data):
 def location_from_coords(lng, lat):
     return fromstr('POINT(%.5f %.5f)' % (float(lng), float(lat)))
 
+def str_from_location(location):
+    """
+    Produces a string suitable to be passed into contrib.geos.gis.fromstr
+    """
+    return 'POINT(%.5f %.5f)' % (float(location.x), float(location.y))
+
 def generic_exception_handler(request, exception):
-    response = JSONResponse()
+    response = BaseView(request=request)
     _, _, tb = sys.exc_info()
     # we just want the last frame, (the one the exception was thrown from)
-    lastframe = get_traceback_frames(tb)[-1]
-    location = "%s in %s, line: %s" % (lastframe['filename'], lastframe['function'], lastframe['lineno'])
-    response.add_errors([exception.message, location])
-    logger = logging.getLogger('webservice')
-    logger.debug([exception.message, location])
+    import traceback
+    frames = traceback.extract_tb(tb)
+    frame_template = "File %s, line %s, in %s\n  %s\n"
+    error = ''
+
+    for frame in frames:
+        error += frame_template % frame
+
+    if exception.message:
+        error += exception.message
+
+    response.add_errors(error)
+    logger = logging.getLogger('error')
+    logger.error(error)
     if transaction.is_dirty():
         transaction.rollback()
-    return response.send()
+
+    return response.serialize()
 
 
 def get_traceback_frames(tb):
@@ -88,6 +108,7 @@ def get_traceback_frames(tb):
         # support for __traceback_hide__ which is used by a few libraries
         # to hide internal frames.
 
+
         if not tb.tb_frame.f_locals.get('__traceback_hide__'):
             frames.append({
                 'filename': tb.tb_frame.f_code.co_filename,
@@ -95,7 +116,6 @@ def get_traceback_frames(tb):
                 'lineno': tb.tb_lineno,
             })
         tb = tb.tb_next
-
     return frames
 
 def default_time_parse(time_string):
@@ -103,7 +123,7 @@ def default_time_parse(time_string):
     Expects times in the formats: "2011-12-25 18:22",  "2011-12-25 18:22:12",  "2011-12-25 18:22:12.241512", "2012-02-29"
     Returns None on error
     """
-    formats = ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d")
+    formats = ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d", "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S")
 
     if not time_string or not isinstance(time_string, basestring):
         return None
@@ -280,16 +300,19 @@ def fromXML(src):
         xml.sax.parse(src, builder)
     return builder.root._attrs.values()[0]
 
-def isDirty(model, fieldName):
-    """
+def isDirty(model, field_name):
+    """)
     Compares a given model instance with the DB and tells you whether or not it has been altered since the last save()
     """
-    entryInDB = None
+    db_entry = None
     try:
-        entryInDB = model.__class__.objects.get(id=model.id)
+        db_entry = model.__class__.objects.get(id=model.id)
     except ObjectDoesNotExist:
         raise Exception("A serious error has occurred in db_utils.isDirty(). A model instance was passed that doesn't exist.")
-    return re.sub('[\r\n\ ]+', '', entryInDB.__dict__.get(fieldName, 'none')) != re.sub('[\r\n\ ]+', '', model.__dict__.get(fieldName, 'none'))
+
+    db_data = str(db_entry.__dict__.get(field_name, ''))
+    model_data = str(model.__dict__.get(field_name, ''))
+    return re.sub('[\r\n\ ]+', '', db_data) != re.sub('[\r\n\ ]+', '', model_data)
 
 
 
@@ -328,6 +351,40 @@ class JSONField(models.TextField):
 def geo_from_ip(ip):
     geo =  simplejson.loads(urllib2.urlopen(GEOIP_URL % ip).read())
     return geo['lng'], geo['lat']
+
+def get_one_if(seq, func):
+    ret = [i for i in seq if func(i)]
+    if ret:
+        return ret[0]
+    return None
+
+class DateTimeAwareJSONEncoder(simplejson.JSONEncoder):
+    """
+    JSONEncoder subclass that knows how to encode date/time types
+    """
+
+    DATE_FORMAT = "%Y-%m-%d"
+    TIME_FORMAT = "%H:%M:%S.%f"
+
+    def default(self, o):
+        if isinstance(o, datetime.datetime):
+            o = datetime.datetime(o.year, o.month, o.day, o.hour, o.minute, o.second, o.microsecond)
+            r = o.strftime(self.DATE_FORMAT + 'T' + self.TIME_FORMAT)
+            return r[:-3]
+        elif isinstance(o, datetime.date):
+            return o.strftime(self.DATE_FORMAT)
+        elif isinstance(o, datetime.time):
+            return o.strftime(self.TIME_FORMAT)
+        else:
+            return super(DateTimeAwareJSONEncoder, self).default(o)
+
+def flat_earth_distance(lng1, lat1, lng2, lat2):
+    #calculate distance, ignoring curvature of the earth
+    #based on 'Equirectangular approximation' described here: http://www.movable-type.co.uk/scripts/latlong.html'
+    earth_radius= 6371000 # in meters
+    p1 = (lng2 - lng1) * math.cos( 0.5 * (lat1 + lat2))
+    p2 = (lat2 - lat1)
+    return earth_radius * math.sqrt(p1*p1 + p2*p2)
 
 from south.modelsinspector import add_introspection_rules
 add_introspection_rules([], ["services.utils.JSONField"])

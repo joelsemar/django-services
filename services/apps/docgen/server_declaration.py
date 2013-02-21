@@ -1,5 +1,5 @@
 import re
-from services.controller import BaseController
+from services.controller import BaseController, Resource
 from services.apps.docgen.models import StoredHandlerResponse, StoredHandlerRequest, StoredHttpParam
 from django.conf import settings
 
@@ -21,8 +21,8 @@ class ServerDeclaration():
         self.all_requests = list(StoredHandlerRequest.objects.all())
         self.all_params = list(StoredHttpParam.objects.all())
         for handler in self.handlers:
-            self.handler_list.append({'name': re.sub('Handler$', '', handler.__class__.__name__),
-                                      'methods': self.get_methods(handler)})  
+            self.handler_list.append({'name': re.sub('Controller$', '', handler.__class__.__name__),
+                                      'methods': self.get_methods(handler)})
 
         self.handler_list.sort(key=lambda x: x['name'])
 
@@ -97,7 +97,7 @@ class ServerDeclaration():
             param['comment'] = re.sub('\(optional\)', '', param['comment'])
             param['required'] = '0'
         else:
-            param['required'] = '1' 
+            param['required'] = '1'
         return param
 
     def crawl_urls(self):
@@ -112,6 +112,9 @@ class ServerDeclaration():
                 else:
                     callback = entry.callback
                     all.append(entry)
+                    if isinstance(callback, Resource):
+                        callback = callback.controller_class()
+
                     if isinstance(callback, BaseController):
                         handler_name = callback.__class__.__name__
                         if handler_name not in handler_names and not getattr(callback.__class__, 'internal', False):

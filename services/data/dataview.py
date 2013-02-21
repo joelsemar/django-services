@@ -24,11 +24,10 @@ class DataViewManager(object):
         ##sometimes we need to pass straight to mongo 
         return [self._init_from_dict(d) for d in db[self.collection].find(query)] 
 
-
     def create(self, **kwargs):
         ret = self._cls(**kwargs)
         ret.save()
-        return ret;
+        return ret
 
     def _init_from_dict(self, data):
         if not data:
@@ -47,9 +46,8 @@ class BaseDataView(type):
         for field_name, field in attrs.items():
             if isinstance(field, DataField):
                 field._name = field_name
-            
         return data_view
-        
+
 
 class DataView(object):
     validation_method_regex = r'^check_(?P<field>[\w]+)$'

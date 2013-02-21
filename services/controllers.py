@@ -69,7 +69,7 @@ class GenericUserController(BaseController):
             return response.set(user={'username':user.username, 'id' :profile.id})
 
         transaction.rollback()
-        return response.send(errors='User creation failed', status=500)
+        return response.add_errors('User creation failed', status=500)
 
     @render_with(ModelView)
     @transaction.commit_on_success
@@ -95,7 +95,7 @@ class GenericUserController(BaseController):
 
         if response._errors:
             transaction.rollback()
-            return response.send()
+            return
 
         response.set(instance=user_profile);
 
@@ -132,10 +132,10 @@ class LoginController(BaseController):
                 user = User.objects.get(email=email)
                 username = user.username
             except User.DoesNotExist:
-                return response.send(errors='insufficient_credentials', status=401)
+                return response.add_errors('insufficient_credentials', status=401)
 
         if not all([username, password]):
-            return response.send(errors='insufficient_credentials', status=401)
+            return response.add_errors('insufficient_credentials', status=401)
 
         user = authenticate(username=username, password=password)
         if user:
@@ -146,10 +146,8 @@ class LoginController(BaseController):
             login(request, user)
             response.set(user={'username':username, 'id':profile.id, 'email': user.email})
 
-            return response.send()
-
         else:
-            return response.send(errors='invalid_credentials', status=401)
+            return response.add_errors(errors='invalid_credentials', status=401)
 
     def read(self, request, response):
         """
@@ -157,7 +155,6 @@ class LoginController(BaseController):
         API Handler: GET /logout
         """
         logout(request)
-        return response.send()
 
 
     def update(self, request, response):

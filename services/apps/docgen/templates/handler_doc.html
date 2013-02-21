@@ -17,7 +17,7 @@
             <strong>Parameters</strong>
         </p>
         <ul class='paramlist'>
-            {% if method.params %} 
+            {% if method.params %}
             {% for param in method.params %}
             <li>
                 <b>{{param.name}}</b>
@@ -51,12 +51,12 @@
         {% endif %}
         {% if method.tests %}
         {% for test in method.tests %}
-        <button type="button" onclick='run_test(this,"{{handler.name}}{{method.request_method}}_response_div")' class='test_link' test_data="{{test}}" 
+        <button type="button" onclick='run_test(this,"{{handler.name}}{{method.request_method}}_response_div")' class='test_link' test_data="{{test}}"
           anchor="{{handler.name}}{{method.request_method}}_anchor" handler="{{handler.name}}"
-      {%  if 'auth_test' in test %}
+       {%  if 'auth_test' in test %}
           auth_test="True"
-      {%  endif %}
-      {%  if 'create_user_test' in test %}
+       {%  endif %}
+       {%  if 'create_user_test' in test %}
           create_user_test="True"
        {%  endif %}
        {%  if method.auth_required %}
@@ -69,14 +69,20 @@
         <form class="newTestForm" id="{{handler.name}}{{method.request_method}}_form" style="display:none;">
             <div class='param_label'> Url:</div> <input type="text" id="{{handler.name}}{{method.request_method}}_url" size=30 value="{{method.url}}"><br/>
             {% for param in method.params %}
-            <div class='param_label'> {{param.name}}:</div> <input type='text' name="{{param.name}}" size=30></input><br/>
+              {% if param.name == 'raw_post_body' %}
+                <div class='param_label'> {{param.name}}:</div> <textarea name="{{param.name}}" rows=15 cols=50></textarea><br/>
+               {% else %}
+               <div class='param_label'> {{param.name}}:</div> <input type='text' name="{{param.name}}" size=30></input><br/>
+               {% endif%}
             {% endfor %}
+            <div class='param_label'> _request_id:</div> <input type='text' name="_request_id" size=30></input><br/>
+            <input type="hidden" name="pretty_print" value="true"></input>
             Save As Test: <input type='checkbox' id="{{handler.name}}{{method.request_method}}_save">
             <button type="button" onclick="create_test('{{handler.name}}','{{method.request_method}}')">Send</button>
-            
+
         </form>
         <div id='{{handler.name}}{{method.request_method}}_response_div' class='response_divs' style="display:none;">
         </div>
-        </ul>      
+        </ul>
         </div>
     {% endfor %}

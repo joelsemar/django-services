@@ -17,27 +17,32 @@ class SocialNetwork(models.Model):
     api_key = models.CharField(max_length=1028, null=True, help_text='This field is encrypted')
     app_secret = models.CharField(max_length=1028, null=True, help_text='This field is encrypted')
     app_id = models.CharField(max_length=1028, null=True, help_text='This field is encrypted', blank=True)
-    post_url = models.CharField(max_length=1028)
-    friends_url = models.CharField(max_length=1028)
+    post_url = models.CharField(max_length=1028, blank=True)
+    friends_url = models.CharField(max_length=1028, blank=True)
+    message_url = models.CharField(max_length=1028, blank=True)
 
-    def getRequestTokenURL(self):
-        return 'https://%s/%s' % (self.base_url, self.request_token_path)
+    def request_token_url(self):
+        return 'https://%s/%s?scope=%s' % (self.base_url, self.request_token_path, self.scope_string)
 
-    def getAccessTokenURL(self):
+    def access_token_url(self):
         return 'https://%s/%s' % (self.base_url, self.access_token_path)
 
-    def getAuthURL(self):
+    def get_auth_url(self):
         return 'https://%s/%s' % (self.base_url, self.auth_path)
 
-    def getCallBackURL(self, request):
+    def get_message_url(self):
+        return 'https://%s/%s' % (self.base_url, self.message_url)
+
+    def callback_url(self, request):
         if hasattr(settings, 'SOCIAL_PATH'):
             path = settings.SOCIAL_PATH % self.name
         else:
             path = 'social/callback/%s' % self.name
 
-        return 'http://%s/%s/%s/' % (request.META['HTTP_HOST'], settings.URL_BASE, path)
+        scheme = request.META.get('HTTP_X_FORWARDED_PORT') == '443' and 'https' or 'http'
+        return '%s://%s/%s/%s/' % (scheme, request.META['HTTP_HOST'], settings.URL_BASE, path)
 
-    def getCredentials(self):
+    def get_credentials(self):
         return (self.getKey(), self.getSecret())
 
     def getKey(self):
@@ -98,7 +103,7 @@ class UserNetworkCredentials(models.Model):
         verbose_name_plural = 'User Network Credentials'
 
     def save(self, *args, **kwargs):
-        if not self.id or db_utils.isDirty(self, 'access_token'):
+        if not self.id or isDirty(self, 'access_token'):
             self.access_token = encryption.encryptData(self.access_token)
 
         super(UserNetworkCredentials, self).save(*args, **kwargs)
@@ -116,3 +121,4 @@ for model_name in dir():
     m = getattr(models, model_name)
     if isinstance(m, ModelBase) and not m._meta.abstract:
         models._all_.append(model_name)
+

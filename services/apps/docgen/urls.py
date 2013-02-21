@@ -9,8 +9,5 @@ from services.apps.docgen.controllers import DocController
 admin.autodiscover()
 
 urlpatterns = patterns('',
-    # Examples:
-    # url(r'^$', 'cwnserver.views.home', name='home'),
-    # url(r'^cwnserver/', include('cwnserver.foo.urls')),
     url(r'', DocController()),
 )
