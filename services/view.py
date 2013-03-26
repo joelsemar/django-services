@@ -102,6 +102,9 @@ class BaseView(object):
     def bad_request(self):
         return self.add_errors("BAD REQUEST", status=400)
 
+    def not_found(self):
+        return self.add_errors("Not Found", status=404)
+
     def serialize(self, messages=None, errors=None, status=None):
         from services.utils import DateTimeAwareJSONEncoder
 
