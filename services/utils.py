@@ -10,7 +10,10 @@ import xml.sax.handler
 import math
 
 from django.db import transaction
-from django.contrib.gis.geos import fromstr
+try:
+    from django.contrib.gis.geos import fromstr
+except:
+    pass
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.core.serializers.json import DjangoJSONEncoder
@@ -18,9 +21,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from services.view import BaseView
 import requests
 
-GOOGLE_REVERSE_URL = 'http://maps.googleapis.com/maps/api/geocode/json?sensor=false'
-GOOGLE_API_URL = "http://maps.google.com/maps/geo?output=json&sensor=false"
-GOOGLE_GEOCODING_URL_V3 = "http://maps.googleapis.com/maps/api/geocode/json?sensor=false"
+GOOGLE_GEOCODING_URL = "http://maps.googleapis.com/maps/api/geocode/json?sensor=false"
 GEOIP_URL = "http://api.hostip.info/get_json.php?ip=%s&position=true"
 
 class GeoCodeError(Exception):
@@ -28,12 +29,13 @@ class GeoCodeError(Exception):
 
 class ReverseGeoCode():
 
-    def __init__(self, latlng):
+    def __init__(self, lng, lat):
+        latlng = '%s,%s' % (lat, lng)
         self.query = friendly_url_encode({'latlng': latlng})
 
 
     def get_address(self):
-        response = simplejson.loads(urllib2.urlopen(GOOGLE_REVERSE_URL + '&' + self.query).read())
+        response = simplejson.loads(urllib2.urlopen(GOOGLE_GEOCODING_URL + '&' + self.query).read())
         ret = response['results']
         if not ret:
             raise GeoCodeError('Invalid coordinates')
@@ -46,32 +48,13 @@ class GeoCode():
 
 
     def get_coords(self):
-        response = simplejson.loads(requests.get(GOOGLE_GEOCODING_URL_V3 + '&' + self.query).content)
+        response = simplejson.loads(requests.get(GOOGLE_GEOCODING_URL + '&' + self.query).content)
         try:
            lat = response['results'][0]['geometry']['location']['lat']
            lng = response['results'][0]['geometry']['location']['lng']
         except:
             raise GeoCodeError
         return lng, lat
-
-class GeoCodeOLD():
-
-    def __init__(self, address):
-        self.query = friendly_url_encode({'q': address})
-
-    def _make_call(self):
-        return simplejson.loads(urllib2.urlopen(GOOGLE_API_URL + '&' + self.query).read())
-
-    def get_response(self):
-        return  self._make_call()["Placemark"]
-
-    def get_coords(self):
-        response = self._make_call()
-        try:
-           coordinates = response['Placemark'][0]['Point']['coordinates'][0:2]
-        except KeyError:
-            raise GeoCodeError
-        return tuple([float(n) for n in coordinates])
 
 
 def friendly_url_encode(data):
@@ -123,7 +106,7 @@ def generic_exception_handler(request, exception):
     if transaction.is_dirty():
         transaction.rollback()
 
-    return response.serialize()
+    return response
 
 
 def get_traceback_frames(tb):
