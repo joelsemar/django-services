@@ -88,7 +88,7 @@ class SocialNetwork(models.Model):
 
 class UserNetworkCredentials(models.Model):
     id = models.AutoField(primary_key=True)
-    uuid = models.CharField(max_length=512, db_index=True)
+    uuid = models.CharField(max_length=512, db_index=True, unique=True)
     access_token = models.CharField(max_length=1028, help_text="This field is encrypted")
     profile = models.ForeignKey(settings.AUTH_PROFILE_MODULE)
     network = models.ForeignKey(SocialNetwork)

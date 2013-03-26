@@ -65,3 +65,21 @@ def superuser_only(decorated_function):
         return response.add_errors('401 -- Unauthorized', status=401)
 
     return new_function
+
+from django.db import transaction
+
+def transaction_commit_manually_wrapper(decorated_function):
+    """Wrapper to transaction.commit_manually so that we can reraise any
+    uncaught exception instead of getting TransactionManagementError.
+
+    Ref - https://code.djangoproject.com/ticket/6623
+    """
+    @transaction.commit_manually
+    def new_function(*args, **kwargs):
+        try:
+            return decorated_function(*args, **kwargs)
+        except Exception:
+            transaction.rollback()
+            raise
+
+    return new_function

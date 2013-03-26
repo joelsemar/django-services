@@ -71,7 +71,7 @@ class BaseController(object):
         response = self.run_response_middleware(request, response)
         response = response.serialize()
 
-        if '/ops/health' not in request.path and '/map/users' not in request.path and not settings.DEBUG:
+        if '/ops/health' not in request.path and '/map/users' not in request.path and getattr(settings, 'LOG_API_CALLS', False):
             self.log_request(request, response)
             self.log_event(request, response)
 

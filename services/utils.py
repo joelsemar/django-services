@@ -20,6 +20,7 @@ import requests
 
 GOOGLE_REVERSE_URL = 'http://maps.googleapis.com/maps/api/geocode/json?sensor=false'
 GOOGLE_API_URL = "http://maps.google.com/maps/geo?output=json&sensor=false"
+GOOGLE_GEOCODING_URL_V3 = "http://maps.googleapis.com/maps/api/geocode/json?sensor=false"
 GEOIP_URL = "http://api.hostip.info/get_json.php?ip=%s&position=true"
 
 class GeoCodeError(Exception):
@@ -40,6 +41,20 @@ class ReverseGeoCode():
 
 
 class GeoCode():
+    def __init__(self, address):
+        self.query = friendly_url_encode({'address': address})
+
+
+    def get_coords(self):
+        response = simplejson.loads(requests.get(GOOGLE_GEOCODING_URL_V3 + '&' + self.query).content)
+        try:
+           lat = response['results'][0]['geometry']['location']['lat']
+           lng = response['results'][0]['geometry']['location']['lng']
+        except:
+            raise GeoCodeError
+        return lng, lat
+
+class GeoCodeOLD():
 
     def __init__(self, address):
         self.query = friendly_url_encode({'q': address})
@@ -79,9 +94,10 @@ def generic_exception_handler(request, exception):
     response = BaseView(request=request)
     _, _, tb = sys.exc_info()
     # we just want the last frame, (the one the exception was thrown from)
-    import traceback
+    import traceback, socket
     frames = traceback.extract_tb(tb)
     frame_template = "File %s, line %s, in %s\n  %s\n"
+    error_header = '----%s----\n' % datetime.datetime.utcnow()
     error = ''
 
     for frame in frames:
@@ -90,9 +106,20 @@ def generic_exception_handler(request, exception):
     if exception.message:
         error += exception.message
 
+    error += '\n'
+
     response.add_errors(error)
     logger = logging.getLogger('error')
-    logger.error(error)
+    mail_logger = logging.getLogger('exception_email')
+    logger.error(error_header+error)
+    mail_logger.error('Internal Server Error: %s on %s', request.path, socket.gethostname(),
+        exc_info=tb,
+        extra={
+            'status_code': 500,
+            'request': request
+        }
+    )
+
     if transaction.is_dirty():
         transaction.rollback()
 
