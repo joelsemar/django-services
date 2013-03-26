@@ -96,11 +96,11 @@ class BaseView(object):
 
         return ret
 
-    def access_denied(self):
-        return self.add_errors("ACCESS DENIED", status=401)
+    def access_denied(self, message="Access Denied"):
+        return self.add_errors(message, status=401)
 
-    def bad_request(self):
-        return self.add_errors("BAD REQUEST", status=400)
+    def bad_request(self, message="Bad Request"):
+        return self.add_errors(message, status=400)
 
     def not_found(self):
         return self.add_errors("Not Found", status=404)

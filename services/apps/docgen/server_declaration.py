@@ -1,4 +1,5 @@
 import re
+import importlib
 from services.controller import BaseController, Resource
 from services.apps.docgen.models import StoredHandlerResponse, StoredHandlerRequest, StoredHttpParam
 from django.conf import settings
@@ -103,7 +104,7 @@ class ServerDeclaration():
     def crawl_urls(self):
         ret = []
         handler_names = []
-        from cwnserver import urls
+        urls = importlib.import_module(settings.ROOT_URLCONF)
         all = []
         def _crawl_urls(urllist):
             for entry in urllist:
