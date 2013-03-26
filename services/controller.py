@@ -52,16 +52,25 @@ class BaseController(object):
         if not mapped_method:
             return HttpResponse("Not Found", status=404)
 
-        if hasattr(mapped_method, '_view'):
-            view = mapped_method._view(request=request)
-        else:
+        method_view = getattr(mapped_method, '_view')
+
+        if not method_view:
             view = self.view(request=request)
+
+        elif method_view.__class__ == type:
+            view = method_view(request=request)
+
+        elif  isinstance(method_view, self.view.__class__):
+            view = method_view
+        else:
+            raise Exception("Invalid View")
 
         try:
             response = mapped_method(request, view, *args, **kwargs)
         except Exception, e:
             return self.error_handler(e, request, mapped_method)
 
+        #Allow mapped_method to respond with a view and override ours
         response = response or view
 
         #user has replaced baseview with something else (likely HttpResponse or HttpREsponseRedirect), we are done
@@ -78,7 +87,7 @@ class BaseController(object):
         return response
 
     def run_response_middleware(self, request, response):
-        for mstring in settings.SERVICES_MIDDLEWARE_CLASSES:
+        for mstring in getattr(settings, 'SERVICES_MIDDLEWARE_CLASSES', []):
             module, cls = mstring.rsplit('.', 1)
             module = import_module(module)
             cls = getattr(module, cls)

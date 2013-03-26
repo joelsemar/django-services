@@ -148,18 +148,25 @@ class ListView(BaseView):
 class ModelView(BaseView):
 
     excluded = ()
+    fields = ()
 
     def render(self, request):
 
         ret = {}
         if not self.instance:
             return self._data
-        for key, value in self.instance.__dict__.items():
-            if not key.startswith('_'):
-                ret[key] = value
 
-        for field in self.excluded:
-            del ret[field]
+        if self.fields:
+            for field in self.fields:
+                ret[field] = getattr(self.instance, field)
+
+        else:
+            for key, value in self.instance.__dict__.items():
+                if not key.startswith('_'):
+                    ret[key] = value
+
+                for field in self.excluded:
+                    del ret[field]
 
         return ret
 
@@ -181,6 +188,9 @@ class QuerySetView(BaseView):
     model_view = ModelView
     paging = False
     queryset_label = 'results'
+
+    def __init__(self, model_view=ModelView):
+        self.model_view = model_view
 
     @property
     def queryset(self):
