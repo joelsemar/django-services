@@ -2,5 +2,6 @@ import unittest2
 
 class DataViewTest(unittest.TestCase):
 
-    def setup
+    def setup(self):
+        pass
 
