@@ -52,7 +52,7 @@ class BaseController(object):
         if not mapped_method:
             return HttpResponse("Not Found", status=404)
 
-        method_view = getattr(mapped_method, '_view')
+        method_view = getattr(mapped_method, '_view', None)
 
         if not method_view:
             view = self.view(request=request)

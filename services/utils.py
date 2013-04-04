@@ -106,7 +106,7 @@ def generic_exception_handler(request, exception):
     if transaction.is_dirty():
         transaction.rollback()
 
-    return response
+    return response.serialize()
 
 
 def get_traceback_frames(tb):
