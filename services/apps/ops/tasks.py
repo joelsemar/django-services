@@ -1,4 +1,5 @@
 from celery import task
+
 from services.apps.ops.models import EventLog
 
 

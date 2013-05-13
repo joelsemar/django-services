@@ -10,7 +10,10 @@ from django.utils.importlib import import_module
 
 from services.utils import generic_exception_handler
 from services.view import BaseView
-from services.apps.ops import tasks as ops_tasks
+try:
+    from services.apps.ops import tasks as ops_tasks
+except:
+    ops_tasks = None # no celery
 
 
 class BaseController(object):
@@ -60,11 +63,10 @@ class BaseController(object):
         elif method_view.__class__ == type:
             view = method_view(request=request)
 
-        elif  isinstance(method_view, self.view.__class__):
+        elif  isinstance(method_view, self.view):
             view = method_view
         else:
             raise Exception("Invalid View")
-
         try:
             response = mapped_method(request, view, *args, **kwargs)
         except Exception, e:
@@ -122,6 +124,8 @@ class BaseController(object):
 
     def log_event(self, request, response):
         if 'html' in response._headers['content-type'][1]:
+            return
+        if not ops_tasks:
             return
 
         try:

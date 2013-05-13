@@ -180,8 +180,6 @@ class ModelView(BaseView):
     @classmethod
     def render_instance(cls, instance, request):
         """A Helper method so QuerySet Views can make use of the instance's ModelView"""
-
-
         view = cls(request=request)
         view.set(instance=instance)
         return view.render(request)
@@ -192,8 +190,9 @@ class QuerySetView(BaseView):
     paging = False
     queryset_label = 'results'
 
-    def __init__(self, model_view=ModelView):
+    def __init__(self, request=None, model_view=ModelView):
         self.model_view = model_view
+        super(QuerySetView, self).__init__(request=request)
 
     @property
     def queryset(self):
@@ -216,6 +215,15 @@ class QuerySetView(BaseView):
             return {self.queryset_label: results, 'paging': paging_dict}
 
         return {self.queryset_label: ret}
+
+    @classmethod
+    def inline_render(cls, queryset, request):
+        """
+        A Helper method to render a queryset inline manually
+        """
+        view = cls()
+        view.set(queryset=queryset)
+        return view.render(request)['results']
 
     def sort(self, results, request):
         return results

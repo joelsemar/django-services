@@ -1,4 +1,5 @@
 import re
+import os
 import importlib
 from services.controller import BaseController, Resource
 from services.apps.docgen.models import StoredHandlerResponse, StoredHandlerRequest, StoredHttpParam
@@ -21,6 +22,7 @@ class ServerDeclaration():
         self.all_responses = list(StoredHandlerResponse.objects.all())
         self.all_requests = list(StoredHandlerRequest.objects.all())
         self.all_params = list(StoredHttpParam.objects.all())
+
         for handler in self.handlers:
             self.handler_list.append({'name': re.sub('Controller$', '', handler.__class__.__name__),
                                       'methods': self.get_methods(handler)})
@@ -50,7 +52,7 @@ class ServerDeclaration():
             api_handler = self._get_method_api_handler(docstring)
 
             ret.append({'name': method_name, 'request_method': request_method,
-                        'url': '/%s%s' % (settings.URL_BASE, api_handler.get('url')), 'comment': api_handler.get('comment'),
+                        'url': os.path.join(getattr(settings, 'URL_BASE', ''), api_handler.get('url')), 'comment': api_handler.get('comment'),
                         'params': self._get_method_params(docstring), 'auth_required': auth_required,
                         'return_vals': self._get_return_vals(docstring), 'example_response': example_response, "tests": tests})
         return ret

@@ -41,7 +41,11 @@ class GenericUserController(BaseController):
         Params:
             {{ params }}
         """
-        profile_form = self.profile_form(request.POST, request.FILES)
+        profile_form = None
+        profile = None
+        if self.profile_form:
+            profile_form = self.profile_form(request.POST, request.FILES)
+
         user_form = self.user_form(request.POST)
         if user_form.is_valid():
             user = user_form.save()
@@ -50,7 +54,7 @@ class GenericUserController(BaseController):
             response.add_errors(self.format_errors(user_form))
             return
 
-        if profile_form.is_valid():
+        if profile_form and profile_form.is_valid():
             profile = profile_form.save(commit=False)
 
         else:
@@ -60,8 +64,10 @@ class GenericUserController(BaseController):
             transaction.rollback()
             return
 
-        profile.user = user
-        profile.save()
+        if profile:
+            profile.user = user
+            profile.save()
+
         user = authenticate(username=user_form.cleaned_data['username'], password=request.POST.get('password'))
 
         if user:
@@ -142,9 +148,8 @@ class LoginController(BaseController):
             single_session = getattr(settings, "SINGLE_SESSION", False)
             if single_session:
                 [s.delete() for s in Session.objects.all() if s.get_decoded().get('_auth_user_id') == user.id]
-            profile = user.get_profile()
             login(request, user)
-            response.set(user={'username':username, 'id':profile.id, 'email': user.email})
+            response.set(user={'username':username, 'id':user.id, 'email': user.email})
 
         else:
             return response.add_errors(errors='invalid_credentials', status=401)

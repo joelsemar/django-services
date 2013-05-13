@@ -17,6 +17,7 @@ except:
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.core.serializers.json import DjangoJSONEncoder
+from django.shortcuts import render
 
 from services.view import BaseView
 import requests
@@ -398,3 +399,6 @@ def flat_earth_distance(lng1, lat1, lng2, lat2):
 
 from south.modelsinspector import add_introspection_rules
 add_introspection_rules([], ["services.utils.JSONField"])
+
+def direct_to_template(template, context={}):
+    return lambda request: render(request, template, context)
