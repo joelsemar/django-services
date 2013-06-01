@@ -3,8 +3,12 @@
     <head>
         <script type='application/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js'>
         </script>
-        {% include 'doc_css.html' %}
-        {% include 'doc_javascript.html' %}
+        <style type="text/css">
+        {% include 'doc.css' %}
+        </style>
+        <script type="application/javascript">
+        {% include 'doc.js' %}
+        </script>
     </head>
     <body>
         <a name='top'><h1>{{servername}} API Documentation</h1></a>
@@ -14,9 +18,6 @@
         Read <a href="#status_codes" onclick ='load_handler("#status_codes");'>here</a>
         to see a list of the HTTP Status codes you may encounter.
         <br/>
-        <button onclick="run_all_tests()">
-            Run Available Tests
-        </button>
         {% if changelog_entries %}<h2><a name='changelog'>Recent API Changes:</a></h2>
         <div id='table_outer'>
             <table width='100%'>
