@@ -164,6 +164,9 @@ class ModelView(BaseView):
                 ret[field] = getattr(self.instance, field)
 
         else:
+            if hasattr(self.instance, 'dict'):
+                return self.instance.dict
+
             for key, value in self.instance.__dict__.items():
                 if not key.startswith('_'):
                     ret[key] = value
