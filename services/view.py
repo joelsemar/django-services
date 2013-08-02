@@ -171,8 +171,8 @@ class ModelView(BaseView):
                 if not key.startswith('_'):
                     ret[key] = value
 
-                for field in self.excluded:
-                    del ret[field]
+            for field in self.excluded:
+                del ret[field]
 
         return ret
 
