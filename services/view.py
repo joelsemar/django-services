@@ -174,6 +174,9 @@ class ModelView(BaseView):
             for field in self.excluded:
                 del ret[field]
 
+            for field in self.extra_fields:
+                ret[field] = getattr(self.instance, field)
+
         return ret
 
     @property
