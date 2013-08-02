@@ -152,6 +152,7 @@ class ModelView(BaseView):
 
     excluded = ()
     fields = ()
+    extra_fields = ()
 
     def render(self, request):
 
