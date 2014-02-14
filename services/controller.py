@@ -65,10 +65,13 @@ class BaseController(object):
 
         elif  isinstance(method_view, self.view):
             view = method_view
+            view._request=request;
+
         else:
             raise Exception("Invalid View")
         try:
             response = mapped_method(request, view, *args, **kwargs)
+
         except Exception, e:
             return self.error_handler(e, request, mapped_method)
 
