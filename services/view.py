@@ -17,6 +17,9 @@ class BaseView(object):
     A generic response object for generating and returning api responses
     """
     def __init__(self, request=None):
+        self.reset(request)
+
+    def reset(self, request):
         self._errors = []
         self._request = request
         self._messages = []
