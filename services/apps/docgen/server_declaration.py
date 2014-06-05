@@ -46,6 +46,8 @@ class ServerDeclaration():
             method_name = call_map[request_method]
             method = getattr(handler, method_name)
             docstring = method.__doc__
+            if not docstring:
+                continue
             auth_required = False
             if hasattr(method, 'authentication_required'):
                 auth_required = True
@@ -58,8 +60,6 @@ class ServerDeclaration():
         return ret
 
     def _get_method_api_handler(self, docstring):
-        if not docstring:
-            return {}
 
         api_handler = re.search(r'api handler\:? (?P<method>post|put|get|delete)[\ ](?P<url>.+)', docstring, flags=re.IGNORECASE)
         if api_handler:
