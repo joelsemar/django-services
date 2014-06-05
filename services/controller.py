@@ -55,17 +55,23 @@ class BaseController(object):
         if not mapped_method:
             return HttpResponse("Not Found", status=404)
 
+
+        #decorators attach the View class to the method itself as '_view', first look there
         method_view = getattr(mapped_method, '_view', None)
 
+        #or the controller has a default view property
         if not method_view:
-            view = self.view(request=request)
+            method_view = self.view
 
-        elif method_view.__class__ == type:
+        # the user has given us a class @render_with(QuerySetView)
+        if method_view.__class__ == type:
             view = method_view(request=request)
 
+        #the user has given us an instantiated instance @render_with(QuerySetView(model_view=MyModelView))
+        # we have to reset it and attach the request object to it
         elif  isinstance(method_view, self.view):
             view = method_view
-            view._request=request;
+            view.reset(request)
 
         else:
             raise Exception("Invalid View")
