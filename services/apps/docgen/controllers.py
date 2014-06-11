@@ -22,6 +22,5 @@ class DocController(BaseController):
             context['developer_email'] = getattr(settings, 'ADMINS')[0][1]
         else:
             context['developer_email'] = 'admin@example.com'
-        context['changelog_entries'] = APIChangeLogEntry.objects.all()
 
         return render(request, 'apidocs.html', context)
