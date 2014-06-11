@@ -2,7 +2,6 @@ import re
 import os
 import importlib
 from services.controller import BaseController, Resource
-from services.apps.docgen.models import StoredHandlerResponse, StoredHandlerRequest, StoredHttpParam
 from django.conf import settings
 
 call_map = {'GET': 'read', 'POST': 'create',
@@ -19,10 +18,6 @@ class ServerDeclaration():
         self.handlers = self.crawl_urls()
         self.handler_list = []
 
-        self.all_responses = list(StoredHandlerResponse.objects.all())
-        self.all_requests = list(StoredHandlerRequest.objects.all())
-        self.all_params = list(StoredHttpParam.objects.all())
-
         for handler in self.handlers:
             self.handler_list.append({'name': re.sub('Controller$', '', handler.__class__.__name__),
                                       'methods': self.get_methods(handler)})
@@ -32,16 +27,11 @@ class ServerDeclaration():
     def get_methods(self, handler):
         ret = []
         id = str(handler.__class__)
-        stored_responses = [s for s in self.all_responses if s.handler_id == id]
         all_tests = [t for t in self.all_requests if t.handler_id == id]
         for request_method in call_map.keys():
             if not hasattr(handler, call_map[request_method]):
                 continue
-            stored_response = [s for s in stored_responses if s.method == request_method]
             tests = [t.serialize([s.dict() for s in self.all_params if s.request_id==t.id]) for t in all_tests if t.method == request_method]
-            example_response = ''
-            if stored_response:
-                example_response = stored_response[0].response
 
             method_name = call_map[request_method]
             method = getattr(handler, method_name)
