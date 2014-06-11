@@ -27,11 +27,9 @@ class ServerDeclaration():
     def get_methods(self, handler):
         ret = []
         id = str(handler.__class__)
-        all_tests = [t for t in self.all_requests if t.handler_id == id]
         for request_method in call_map.keys():
             if not hasattr(handler, call_map[request_method]):
                 continue
-            tests = [t.serialize([s.dict() for s in self.all_params if s.request_id==t.id]) for t in all_tests if t.method == request_method]
 
             method_name = call_map[request_method]
             method = getattr(handler, method_name)
@@ -46,7 +44,7 @@ class ServerDeclaration():
             ret.append({'name': method_name, 'request_method': request_method,
                         'url': os.path.join(getattr(settings, 'URL_BASE', ''), api_handler.get('url')), 'comment': api_handler.get('comment'),
                         'params': self._get_method_params(docstring), 'auth_required': auth_required,
-                        'return_vals': self._get_return_vals(docstring), 'example_response': example_response, "tests": tests})
+                        'return_vals': self._get_return_vals(docstring), 'example_response': example_response, })
         return ret
 
     def _get_method_api_handler(self, docstring):
