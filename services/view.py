@@ -108,6 +108,9 @@ class BaseView(object):
     def not_found(self):
         return self.add_errors("Not Found", status=404)
 
+    def created(self):
+        return self.set_status(201)
+
     def serialize(self, messages=None, errors=None, status=None):
         from services.utils import DateTimeAwareJSONEncoder
 
