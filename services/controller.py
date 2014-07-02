@@ -28,22 +28,24 @@ class BaseController(object):
     request_logger = logging.getLogger('default')
     @vary_on_headers('Authorization')
     def __call__(self, request, *args, **kwargs):
-        request.initialized = time.time()
-        request.request_id = request.POST.get('_request_id') or request.GET.get('_request_id') or ''
         request_method = request.method.upper()
+        if request.META.get('Content-Type') == 'application/json':
+            self.process_json_body(request)
 
         #django doesn't know PUT
-        if request_method == "PUT":
-            request.PUT = QueryDict(request.raw_post_data)
-            request.request_id = request.PUT.get('request_id')
-            request.POST = QueryDict({})
+        else:
+            if request_method == "PUT":
+                request.PUT = QueryDict(request.raw_post_data)
+                request.request_id = request.PUT.get('request_id')
+                request.POST = QueryDict({})
 
-        if request_method == "DELETE":
-            request.DELETE = QueryDict(request.raw_post_data)
-            if not request.DELETE.keys():
-               request.DELETE = QueryDict(request.META['QUERY_STRING'])
-            request.POST = QueryDict({})
+            if request_method == "DELETE":
+                request.DELETE = QueryDict(request.raw_post_data)
+                if not request.DELETE.keys():
+                    request.DELETE = QueryDict(request.META['QUERY_STRING'])
+                    request.POST = QueryDict({})
 
+         
 
         method_name = self.callmap.get(request_method, '')
 
@@ -51,6 +53,12 @@ class BaseController(object):
             return HttpResponseNotAllowed([method for method in self.callmap.keys() if hasattr(self, method)])
 
         mapped_method = getattr(self, method_name, None)
+
+        if hasattr(mapped_method, '_validator_class'):
+            try:
+                self.run_validator(request, mapped_method._validator_class)
+            except ValidationError as e:
+                return  BaseView().add_errors(str(e))
 
         if not mapped_method:
             return HttpResponse("Not Found", status=404)
@@ -105,62 +113,13 @@ class BaseController(object):
     def error_handler(self, e, request, mapped_method):
         return generic_exception_handler(request, e)
 
-    def format_errors(self, form):
-        return [v[0].replace('This field', k.title()) for k, v in form.errors.items()]
-
-    def log_request(self, request, response):
-        queries = connection.queries
-        num_queries = len(queries)
-        qtime = sum([float(q['time']) for q in queries])
-        user_id = 'n/a'
-        if request.user.is_authenticated():
-            user_id = request.user.id
-
-        self.request_logger.debug('User: %(user_id)s SSN:%(sessionid)s RID:%(request_id)s %(method)s %(path)s '
-                                  'ran %(num_queries)s queries in:%(qtime)s seconds. Ttime:%(ttime)s s. --%(status)s ' % {
-                                      'request_id': request.request_id or 'n/a',
-                                      'num_queries': num_queries, 'qtime': qtime,
-                                      'method': getattr( request, 'method', ''),
-                                      'ttime': '%.3f' % (time.time() - request.initialized),
-                                      'sessionid': request.session._session_key,
-                                      'user_id': user_id,
-                                      'status': response.status_code,
-                                      'path': request.get_full_path()})
-
-    def log_event(self, request, response):
-        if 'html' in response._headers['content-type'][1]:
-            return
-        if not ops_tasks:
-            return
-
+    def process_json_body(self, request):
+        request_method = request.method.upper()
         try:
-            body = request.body
+            json_data = json.loads(request.raw_post_data)
+            if request_method != 'GET':
+                request[request_method] =  QueryDict(json_data)
         except:
-            return
+            raise Exception('Invalid JSON data')
 
-        ops_tasks.log_api_interaction.delay(
-              request_id=request.request_id or 'n/a',
-              request_method=request.method,
-              profile_id=request.user.is_authenticated() and request.user.get_profile().id or None,
-              session_id=request.session._session_key or 'n/a',
-              host=socket.gethostname(),
-              path=request.path,
-              query_string=request.META.get('QUERY_STRING', ''),
-              request_body=body,
-              status_code=response.status_code,
-              response_body=response.content,
-              when=datetime.datetime.utcnow(),)
 
-    def trace_log(self, message, request):
-        if not request.request_id:
-            return
-        dt = time.time() - request.initialized
-        self.request_trace_logger.debug("%s %s after %sms" % (request.request_id, message, dt*1000))
-
-class Resource(object):
-
-    def __init__(self, controller_class):
-        self.controller_class = controller_class
-
-    def __call__(self, *args, **kwargs):
-        return self.controller_class()(*args, **kwargs)

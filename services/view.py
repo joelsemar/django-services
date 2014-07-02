@@ -11,6 +11,7 @@ JSON_INDENT = 4
 JSONSerializer = serializers.get_serializer('json')
 
 logger = logging.getLogger('default')
+legacy_format = getattr(settings, 'API_RESPONSE_LEGACY_FORMAT', True)
 
 class BaseView(object):
     """
@@ -123,16 +124,19 @@ class BaseView(object):
         if messages:
             self.add_messages(messages)
 
-        response_dict = {}
-        response_dict['data'] = self.render(self._request)
-        response_dict['errors'] = self._errors
-        response_dict['success'] = self.success
+        if legacy_format:
+            response_dict = {}
+            response_dict['data'] = self.render(self._request)
+            response_dict['errors'] = self._errors
+            response_dict['success'] = self.success
 
-        if self._messages:
-            response_dict['messages'] = self._messages
+        else:
+            if self._errors:
+                response_dict = {'errors': self.errors}
+            else:
+                response_dict =  self.render(self._request)
 
-        if self.doc:
-            response_dict['doc'] = self.doc
+
 
         if settings.DEBUG or self._request.REQUEST.get('pretty_print'):
             response_body = simplejson.dumps(response_dict, cls=DateTimeAwareJSONEncoder, indent=JSON_INDENT)
