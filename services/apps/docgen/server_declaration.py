@@ -1,7 +1,7 @@
 import re
 import os
 import importlib
-from services.controller import BaseController, Resource
+from services.controller import BaseController
 from django.conf import settings
 
 call_map = {'GET': 'read', 'POST': 'create',
@@ -103,8 +103,6 @@ class ServerDeclaration():
                 else:
                     callback = entry.callback
                     all.append(entry)
-                    if isinstance(callback, Resource):
-                        callback = callback.controller_class()
 
                     if isinstance(callback, BaseController):
                         handler_name = callback.__class__.__name__
