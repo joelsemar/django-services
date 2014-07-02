@@ -132,7 +132,7 @@ class BaseView(object):
 
         else:
             if self._errors:
-                response_dict = {'errors': self.errors}
+                response_dict = {'errors': self._errors}
             else:
                 response_dict =  self.render(self._request)
 
