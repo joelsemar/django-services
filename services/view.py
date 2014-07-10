@@ -112,6 +112,9 @@ class BaseView(object):
     def created(self):
         return self.set_status(201)
 
+    def no_content(self):
+        return self.set_status(204)
+
     def serialize(self, messages=None, errors=None, status=None):
         from services.utils import DateTimeAwareJSONEncoder
 
@@ -136,12 +139,14 @@ class BaseView(object):
             else:
                 response_dict =  self.render(self._request)
 
-
-
         if settings.DEBUG or self._request.REQUEST.get('pretty_print'):
             response_body = simplejson.dumps(response_dict, cls=DateTimeAwareJSONEncoder, indent=JSON_INDENT)
         else:
             response_body = simplejson.dumps(response_dict, cls=DateTimeAwareJSONEncoder)
+
+        if response_body == '{}':
+            response_body = ''
+
         http_response = HttpResponse(response_body, status=self._status)
         http_response['Content-Type'] = 'application/json'
         return http_response
