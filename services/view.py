@@ -214,6 +214,7 @@ class QuerySetView(BaseView):
 
     def __init__(self, request=None, model_view=None, paging=False):
         self.model_view = model_view or self.model_view
+        self.paging = paging or self.paging
         super(QuerySetView, self).__init__(request=request)
 
     @property
@@ -286,3 +287,6 @@ class QuerySetView(BaseView):
 
         return results, page_dict
 
+
+class PagingQuerySetView(QuerySetView):
+    paging = True
