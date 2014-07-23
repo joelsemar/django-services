@@ -212,6 +212,9 @@ class QuerySetView(BaseView):
     paging = False
     queryset_label = 'results'
 
+    def __init__(self, request=None, model_view=None, paging=False):
+        self.model_view = model_view or self.model_view
+        super(QuerySetView, self).__init__(request=request)
 
     @property
     def queryset(self):
