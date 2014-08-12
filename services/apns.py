@@ -46,6 +46,24 @@ try:
 except ImportError:
     import simplejson as json
 
+class DateTimeAwareJSONEncoder(json.JSONEncoder):
+    """
+    JSONEncoder subclass that knows how to encode date/time types
+    """
+
+    DATE_FORMAT = "%Y-%m-%d"
+    TIME_FORMAT = "%H:%M:%S.%f"
+
+    def default(self, o):
+        if isinstance(o, datetime):
+            return o.strftime("%sT%s" % (self.DATE_FORMAT, self.TIME_FORMAT))
+        elif isinstance(o, date):
+            return o.strftime(self.DATE_FORMAT)
+        elif isinstance(o, time):
+            return o.strftime(self.TIME_FORMAT)
+        else:
+            return super(DateTimeAwareJSONEncoder, self).default(o)
+
 _logger = logging.getLogger(__name__)
 
 MAX_PAYLOAD_LENGTH = 256
