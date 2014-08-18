@@ -77,8 +77,8 @@ class BaseView(object):
     def __getitem__(self, key):
         return self._data[key]
 
-    def get(self, key):
-        return self._data[key]
+    def get(self, key, default=None):
+        return self._data.get(key, default)
 
     def set_status(self, status):
         assert isinstance(status, int)
@@ -115,6 +115,15 @@ class BaseView(object):
     def no_content(self):
         return self.set_status(204)
 
+    def should_render(self, request):
+        return True
+
+    def _render(self, request):
+        if(self.should_render(request)):
+            return self.render(request)
+
+        return self._data
+
     def serialize(self, messages=None, errors=None, status=None):
         from services.utils import DateTimeAwareJSONEncoder
 
@@ -129,7 +138,7 @@ class BaseView(object):
 
         if legacy_format:
             response_dict = {}
-            response_dict['data'] = self.render(self._request)
+            response_dict['data'] = self._render(self._request)
             response_dict['errors'] = self._errors
             response_dict['success'] = self.success
 
@@ -137,7 +146,7 @@ class BaseView(object):
             if self._errors:
                 response_dict = {'errors': self._errors}
             else:
-                response_dict =  self.render(self._request)
+                response_dict =  self._render(self._request)
 
         if settings.DEBUG or self._request.REQUEST.get('pretty_print'):
             response_body = simplejson.dumps(response_dict, cls=DateTimeAwareJSONEncoder, indent=JSON_INDENT)
@@ -168,6 +177,9 @@ class ModelView(BaseView):
     excluded = ()
     fields = ()
     extra_fields = ()
+
+    def should_render(self, request):
+        return self.instance
 
     def render(self, request):
 
@@ -211,6 +223,9 @@ class QuerySetView(BaseView):
     model_view = ModelView
     paging = False
     queryset_label = 'results'
+
+    def should_render(self, request):
+        return self.queryset
 
     def __init__(self, request=None, model_view=None, paging=False):
         self.model_view = model_view or self.model_view
