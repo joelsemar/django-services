@@ -42,7 +42,7 @@ class ServerDeclaration():
             api_handler = self._get_method_api_handler(docstring)
 
             ret.append({'name': method_name, 'request_method': request_method,
-                        'url': os.path.join(getattr(settings, 'URL_BASE', ''), api_handler.get('url')), 'comment': api_handler.get('comment'),
+                        'url': os.path.join(getattr(settings, 'URL_BASE', ''), api_handler.get('url','/')), 'comment': api_handler.get('comment'),
                         'params': self._get_method_params(docstring), 'auth_required': auth_required,
                         'return_vals': self._get_return_vals(docstring),})
         return ret

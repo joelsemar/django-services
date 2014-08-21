@@ -1,23 +1,23 @@
     {% for method in handler.methods %}
         <div class='handlerdiv' id="{{handler.name}}_{{method.request_method}}" style="display:none">
-        <a name='{{handler.name}}'><h2 class='handler_name'>{{handler.name}}</h2></a>
-        <a name='{{handler.name}}{{method.request_method}}_anchor'>
+        <a name='{{handler.name}}' class="anchor"><h2 class='handler_name'>{{handler.name}}</h2></a>
+        <a name='{{handler.name}}{{method.request_method}}_anchor' class="anchor">
             <div style='margin-top:25px;'>
                 <b style='color:red;'>{{method.request_method}}</b>
                 {{method.url}}
             </div>
         </a>
-        <div style='margin-left: 30px;'>
+        <p>
             {% autoescape off %}
             {{method.comment}}
             {% endautoescape %}
-        </div>
+        </p>
         {% if method.auth_required %} <i style='margin-left:30px'>Requires Authentication</i>{% endif %}
-        <p style='margin-left:30px'>
+        {% if method.params %}
+        <p>
             <strong>Parameters</strong>
         </p>
         <ul class='paramlist'>
-            {% if method.params %}
             {% for param in method.params %}
             <li>
                 <b>{{param.name}}</b>
@@ -25,59 +25,21 @@
                 {%ifequal param.required '0' %}(optional){%endifequal%} {% autoescape off %}{{param.comment}}{% endautoescape %}
             </li>
             {% endfor %}
-            {%else %}
-            None
-            {% endif %}
         </ul>
-        {% if method.return_vals %}
-        <p style='margin-left:30px'>
-            <strong>Return Values</strong>
-        </p>
-        <ul class='paramlist'>
-            {% for param in method.return_vals %}
-            <li>
-                <b>{{param.name}}</b>
-                -- <i>{{param.type}}</i>
-                {% autoescape off %}{{param.comment}}{% endautoescape %}
-            </li>
-            {% endfor %}
-        </ul>
+        {% else %}
+            This method takes no parameters
         {% endif %}
-        <button type="button"  onclick="$('#{{handler.name}}{{method.request_method}}_form').toggle()">Try Call</button>
-        {% if method.example_response %}<button type="button"" onclick="$('#{{handler.name}}{{method.request_method}}').toggle()">See Example</button>
-        <div id='{{handler.name}}{{method.request_method}}' style='display:none'>
-            <pre>{{method.example_response}}</pre>
-        </div>
-        {% endif %}
-        {% if method.tests %}
-        {% for test in method.tests %}
-        <button type="button" onclick='run_test(this,"{{handler.name}}{{method.request_method}}_response_div")' class='test_link' test_data="{{test}}"
-          anchor="{{handler.name}}{{method.request_method}}_anchor" handler="{{handler.name}}"
-       {%  if 'auth_test' in test %}
-          auth_test="True"
-       {%  endif %}
-       {%  if 'create_user_test' in test %}
-          create_user_test="True"
-       {%  endif %}
-       {%  if method.auth_required %}
-         auth_required="True"
-       {%  endif %}>
-            Run Test
-        </button>
-        {% endfor %}
-        {% endif %}
-        <form class="newTestForm" id="{{handler.name}}{{method.request_method}}_form" style="display:none;">
-            <div class='param_label'> Url:</div> <input type="text" id="{{handler.name}}{{method.request_method}}_url" size=30 value="{{method.url}}"><br/>
+        <br/>
+        <form class="newTestForm" id="{{handler.name}}{{method.request_method}}_form" role="form" style="width:40%">
+            <input type="text" class="form-control" id="{{handler.name}}{{method.request_method}}_url" size=30 value="{{method.url}}"><br/>
             {% for param in method.params %}
               {% if param.name == 'raw_post_body' %}
+
                 <div class='param_label'> {{param.name}}:</div> <textarea name="{{param.name}}" rows=15 cols=50></textarea><br/>
                {% else %}
-               <div class='param_label'> {{param.name}}:</div> <input type='text' name="{{param.name}}" size=30></input><br/>
+               <input type='text'class="form-control" placeholder="{{param.name}}" size=30></input><br/>
                {% endif%}
             {% endfor %}
-            <div class='param_label'> _request_id:</div> <input type='text' name="_request_id" size=30></input><br/>
-            <input type="hidden" name="pretty_print" value="true"></input>
-            Save As Test: <input type='checkbox' id="{{handler.name}}{{method.request_method}}_save">
             <button type="button" onclick="create_test('{{handler.name}}','{{method.request_method}}')">Send</button>
 
         </form>

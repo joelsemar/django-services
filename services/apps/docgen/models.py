@@ -1,7 +1,7 @@
 import simplejson
 import datetime
 from services import  utils
-from django.contrib.gis.db import models
+from django.db import models
 
 
 class StoredHandlerResponse(models.Model):

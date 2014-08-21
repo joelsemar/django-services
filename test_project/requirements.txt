@@ -1,0 +1,7 @@
+Django==1.5.1
+ipython
+django-extensions
+requests
+south
+simplejson==2.1.6
+ipdb

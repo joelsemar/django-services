@@ -20,7 +20,6 @@ p {
 .handlerdiv {
     width: 100%;
     display: block;
-    border-top: 2px solid #ddd;
     padding: 5px;
 }
 
@@ -48,33 +47,21 @@ ul {
     padding: 10px;
     width: 150px;
 }
-#dynamic_docs{
-    height: auto;
-    height:1200px;
-    overflow: auto;
-    overflow-x: hidden;
-    margin-left: 300px;
-}
 #main{
     width: 100%;
     margin-top: 20px;
 }
 #nav_menu{
     width: 250px;
+/**
     border: 1px gray solid;
     float: left;
     -moz-border-radius: 4px;
     -webkit-border-radius: 4px;
-    max-height: 1000px;
+    max-height: 1000px;
     overflow: auto;
     overflow-x:hidden;
-}
-.menuitem{
-        border-bottom:1px solid gray;
-        height:auto;
-        padding:5px 0 5px 20%;
-        text-align:left;
-        width:100%;
+*/
 }
 #nav_menu h2{
         text-align: center;
@@ -86,3 +73,17 @@ ul {
     padding: 3px 3px 0 3px;
     width: 60px;
 }
+pre {
+    white-space: pre-wrap;       /* CSS 3 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word;       /* Internet Explorer 5.5+ */
+    max-width: 90%;
+}
+.anchor{
+    color: black !important;
+    text-decoration: none !important;
+
+}
+

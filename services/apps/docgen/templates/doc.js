@@ -37,9 +37,6 @@ var value_factory = {
     }
 
 }
-var TEST_LINKS = [];
-var CURRENT_TEST_LINK = 0;
-var TEST_USER = {};
 function prep_params(params){
     ret = {};
     for (key in params) {
@@ -60,108 +57,6 @@ function is_template(value){
 
 }
 
-function run_test(test_runner, div_id){
-    function _run_test(){
-        var test = JSON.parse($(test_runner).attr("test_data"));
-        var result_div = "#" + div_id;
-        var close_control_id = div_id + "_X"
-
-        var params = prep_params(test.params)
-        var store_result_for_test_user = false;
-        if ($(test_runner).attr("create_user_test")) {
-            store_result_for_test_user = true;
-        }
-        $.ajax({
-            url: test.path,
-            data: params,
-            type: test.method,
-            complete: function(response){
-                var parameters = "";
-                for (key in test.params) {
-                    if (test.params.hasOwnProperty(key)) {
-                        parameters += " | " + key + "=" + test.params[key];
-                    }
-
-                }
-                parameters += "<br/>"
-                if (response.getResponseHeader('content-type').indexOf('xml') != -1) {
-                    var data = formatXML(response.responseText);
-                }
-                else {
-                    var data = response.responseText;
-                }
-                var html = "<span class='closing_x' id='" + close_control_id + "';'>Hide X</span>";
-                html += "URL:" + test.path + "<br />";
-                html += "Parameters:<span class='test_request_params'>" + parameters || "None" + "</span><br />"
-                html += "Result: <br /><pre>" + data + "</pre>";
-
-                $(result_div).html(html);
-                $(result_div).show();
-                $("#" + close_control_id).click(function(){
-                    $(result_div).toggle();
-                })
-                setTimeout(next_test, '1200');
-                if (store_result_for_test_user && !TEST_USER.username) {
-                    TEST_USER.username = params.username || params.email;
-                    TEST_USER.password = params.password;
-                }
-                if (response.status == 500) {
-                    failed += 1;
-                }
-                else {
-                    passed += 1;
-                }
-
-            }
-
-
-        })
-
-    }
-    if ($(test_runner).attr("auth_required")) {
-        login(_run_test);
-    }
-    else {
-        _run_test()
-    }
-
-
-}
-
-var passed;
-var failed;
-function run_all_tests(){
-    passed = 0;
-    failed = 0;
-    TEST_LINKS = $(".test_link");
-    TEST_LINKS.sort(function(a, b){
-        return JSON.parse($(b).attr('test_data')).priority - JSON.parse($(a).attr('test_data')).priority
-
-    });
-    console.log(TEST_LINKS);
-    CURRENT_TEST_LINK = 0;
-    var first_test = TEST_LINKS[CURRENT_TEST_LINK];
-    window.location.hash = $(first_test).attr('anchor');
-    $("#" + $(first_test).attr('handler') + '_link').onclick()
-    first_test.onclick();
-}
-
-function next_test(){
-    if (TEST_LINKS.length) {
-        CURRENT_TEST_LINK += 1;
-        var next_link = TEST_LINKS[CURRENT_TEST_LINK];
-        if (next_link) {
-            window.location.hash = $(next_link).attr('anchor');
-            next_link.onclick();
-        }
-        else {
-            alert("Ran: " + (passed + failed) + ' Passed: ' + passed + " Failed: " + failed)
-            TEST_LINKS = [];
-        }
-
-    }
-
-}
 
 function login(callback){
     var callback = callback ||
@@ -211,10 +106,6 @@ function create_test(handler, method){
     }
     if (!data){
         data = form.serialize();
-    }
-
-    if ($("#" + handler + method + "_save")[0].checked) {
-        headers["Store_As_Test"] = true;
     }
 
     $.ajax({
