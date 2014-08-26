@@ -122,6 +122,9 @@ class BaseView(object):
         if(self.should_render(request)):
             return self.render(request)
 
+        return self.empty_response()
+
+    def empty_response(self):
         return self._data
 
     def serialize(self, messages=None, errors=None, status=None):
@@ -236,6 +239,8 @@ class QuerySetView(BaseView):
     def queryset(self):
         return self._data.get('queryset', None)
 
+    def empty_response(self):
+        return {self.queryset_label: []}
 
     def render(self, request):
         queryset = self.queryset
