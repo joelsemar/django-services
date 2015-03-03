@@ -29,7 +29,7 @@ class BaseController(object):
     @vary_on_headers('Authorization')
     def __call__(self, request, *args, **kwargs):
         request_method = request.method.upper()
-        if request.META.get('Content-Type') == 'application/json':
+        if request.META.get('CONTENT_TYPE') == 'application/json':
             self.process_json_body(request)
 
         #django doesn't know PUT
@@ -116,9 +116,9 @@ class BaseController(object):
     def process_json_body(self, request):
         request_method = request.method.upper()
         try:
-            json_data = json.loads(request.raw_post_data)
+            json_data = json.loads(request.body)
             if request_method != 'GET':
-                request[request_method] =  QueryDict(json_data)
+                request[request_method] = QueryDict(json_data)
         except:
             raise Exception('Invalid JSON data')
 
