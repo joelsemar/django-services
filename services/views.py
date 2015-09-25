@@ -13,10 +13,13 @@ JSONSerializer = serializers.get_serializer('json')
 logger = logging.getLogger('default')
 legacy_format = getattr(settings, 'API_RESPONSE_LEGACY_FORMAT', True)
 
+
 class BaseView(object):
+
     """
     A generic response object for generating and returning api responses
     """
+
     def __init__(self, request=None):
         self.reset(request)
 
@@ -28,7 +31,6 @@ class BaseView(object):
         _set('_data',  {})
         _set('_status', 200)
         _set('headers', {})
-
 
     def set_headers(self, headers):
         for k, v in headers.items():
@@ -42,7 +44,7 @@ class BaseView(object):
             self._status = status
 
         if isinstance(errors, basestring):
-            #just a single error
+            # just a single error
             self._errors.append(errors)
             return
 
@@ -55,7 +57,7 @@ class BaseView(object):
 
     def add_messages(self, messages):
         if isinstance(messages, basestring):
-            #just a single message
+            # just a single message
             self._messages.append(messages)
             return
 
@@ -66,7 +68,6 @@ class BaseView(object):
             return
         self._messages.append(messages)
 
-
     def set(self, **kwargs):
         self._data.update(kwargs)
 
@@ -75,7 +76,6 @@ class BaseView(object):
             self._data[key] = value
         else:
             super(BaseView, self).__setattr__(key, value)
-
 
     def __getattr__(self, key):
         return self.data.get(key)
@@ -146,7 +146,7 @@ class BaseView(object):
             if self._errors:
                 response_dict = {'errors': self._errors}
             else:
-                response_dict =  self._render(self._request)
+                response_dict = self._render(self._request)
 
         if settings.DEBUG or self._request.REQUEST.get('pretty_print'):
             response_body = simplejson.dumps(response_dict, cls=DateTimeAwareJSONEncoder, indent=JSON_INDENT)
@@ -160,6 +160,7 @@ class BaseView(object):
         http_response['Content-Type'] = 'application/json'
         return http_response
 
+
 class ListView(BaseView):
 
     def dict(self, instance):
@@ -171,6 +172,7 @@ class ListView(BaseView):
             if isinstance(value, (list, tuple)):
                 ret[key] = [self.dict(d) for d in value]
         return ret
+
 
 class ModelView(BaseView):
 
@@ -236,28 +238,25 @@ class QuerySetView(BaseView):
     def queryset(self):
         return self._data.get('queryset', None)
 
-
     def render(self, request):
         queryset = self.queryset
 
         if self.paging:
-            return render_paged(request):
+            return self.render_paged(request, queryset)
 
         ret = [self.model_view.render_instance(obj, request) for obj in queryset]
         ret = self.sort(ret, request)
 
         return {self.queryset_label: ret}
 
-
-    def render_paged(self, request):
-        results, paging_dict = self.auto_page(ret, page_number=request.GET.get('page_number', 0), limit=request.GET.get('limit', 20))
+    def render_paged(self, request, queryset):
+        results, paging_dict = self.auto_page(
+            queryset, page_number=request.GET.get('page_number', 0), limit=request.GET.get('limit', 20))
 
         ret = [self.model_view.render_instance(obj, request) for obj in results]
         ret = self.sort(ret, request)
 
         return {self.queryset_label: results, 'paging': paging_dict}
-
-
 
     @classmethod
     def inline_render(cls, queryset, request):
@@ -301,9 +300,9 @@ class QuerySetView(BaseView):
             previous_page = None
 
         page_dict = {'page': page_number,
-                    'next_page': next_page,
-                    'previous_page': previous_page,
-                    'total_pages': pages.num_pages}
+                     'next_page': next_page,
+                     'previous_page': previous_page,
+                     'total_pages': pages.num_pages}
 
         return results, page_dict
 
