@@ -239,20 +239,25 @@ class QuerySetView(BaseView):
 
     def render(self, request):
         queryset = self.queryset
-        if queryset is None:
-            return self._data
-
-        ret = []
-        for profile in queryset:
-            ret.append(self.model_view.render_instance(profile, request))
-
-        ret = self.sort(ret, request)
 
         if self.paging:
-            results, paging_dict = self.auto_page(ret, page_number=request.GET.get('page_number', 1), limit=request.GET.get('limit', 20))
-            return {self.queryset_label: results, 'paging': paging_dict}
+            return render_paged(request):
+
+        ret = [self.model_view.render_instance(obj, request) for obj in queryset]
+        ret = self.sort(ret, request)
 
         return {self.queryset_label: ret}
+
+
+    def render_paged(self, request):
+        results, paging_dict = self.auto_page(ret, page_number=request.GET.get('page_number', 0), limit=request.GET.get('limit', 20))
+
+        ret = [self.model_view.render_instance(obj, request) for obj in results]
+        ret = self.sort(ret, request)
+
+        return {self.queryset_label: results, 'paging': paging_dict}
+
+
 
     @classmethod
     def inline_render(cls, queryset, request):

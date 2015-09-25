@@ -25,15 +25,16 @@ import requests
 GOOGLE_GEOCODING_URL = "http://maps.googleapis.com/maps/api/geocode/json?sensor=false"
 GEOIP_URL = "http://api.hostip.info/get_json.php?ip=%s&position=true"
 
+
 class GeoCodeError(Exception):
     pass
+
 
 class ReverseGeoCode():
 
     def __init__(self, lng, lat):
         latlng = '%s,%s' % (lat, lng)
         self.query = friendly_url_encode({'latlng': latlng})
-
 
     def get_address(self):
         response = simplejson.loads(urllib2.urlopen(GOOGLE_GEOCODING_URL + '&' + self.query).read())
@@ -44,15 +45,15 @@ class ReverseGeoCode():
 
 
 class GeoCode():
+
     def __init__(self, address):
         self.query = friendly_url_encode({'address': address})
-
 
     def get_coords(self):
         response = simplejson.loads(requests.get(GOOGLE_GEOCODING_URL + '&' + self.query).content)
         try:
-           lat = response['results'][0]['geometry']['location']['lat']
-           lng = response['results'][0]['geometry']['location']['lng']
+            lat = response['results'][0]['geometry']['location']['lat']
+            lng = response['results'][0]['geometry']['location']['lng']
         except:
             raise GeoCodeError
         return lng, lat
@@ -68,17 +69,20 @@ def friendly_url_encode(data):
 def location_from_coords(lng, lat):
     return fromstr('POINT(%.5f %.5f)' % (float(lng), float(lat)))
 
+
 def str_from_location(location):
     """
     Produces a string suitable to be passed into contrib.geos.gis.fromstr
     """
     return 'POINT(%.5f %.5f)' % (float(location.x), float(location.y))
 
+
 def generic_exception_handler(request, exception):
     response = BaseView(request=request)
     _, _, tb = sys.exc_info()
     # we just want the last frame, (the one the exception was thrown from)
-    import traceback, socket
+    import traceback
+    import socket
     frames = traceback.extract_tb(tb)
     frame_template = "File %s, line %s, in %s\n  %s\n"
     error_header = '----%s----\n' % datetime.datetime.utcnow()
@@ -95,13 +99,13 @@ def generic_exception_handler(request, exception):
     response.add_errors(error)
     logger = logging.getLogger('error')
     mail_logger = logging.getLogger('exception_email')
-    logger.error(error_header+error)
+    logger.error(error_header + error)
     mail_logger.error('Internal Server Error: %s on %s', request.path, socket.gethostname(),
-        exc_info=tb,
-        extra={
-            'status_code': 500,
-            'request': request
-        }
+                      exc_info=tb,
+                      extra={
+        'status_code': 500,
+        'request': request
+    }
     )
 
     if transaction.is_dirty():
@@ -119,7 +123,6 @@ def get_traceback_frames(tb):
         # support for __traceback_hide__ which is used by a few libraries
         # to hide internal frames.
 
-
         if not tb.tb_frame.f_locals.get('__traceback_hide__'):
             frames.append({
                 'filename': tb.tb_frame.f_code.co_filename,
@@ -129,12 +132,14 @@ def get_traceback_frames(tb):
         tb = tb.tb_next
     return frames
 
+
 def default_time_parse(time_string):
     """
     Expects times in the formats: "2011-12-25 18:22",  "2011-12-25 18:22:12",  "2011-12-25 18:22:12.241512", "2012-02-29"
     Returns None on error
     """
-    formats = ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d", "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S")
+    formats = ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S.%f",
+               "%Y-%m-%d", "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S")
 
     if not time_string or not isinstance(time_string, basestring):
         return None
@@ -146,12 +151,14 @@ def default_time_parse(time_string):
             pass
     return None
 
+
 def today():
     """
     Returns a datetime object for today with hour/min zeroed out
     """
     today = datetime.datetime.utcnow()
     return datetime.datetime(today.year, today.month, today.day)
+
 
 def flatten(items):
     '''Returns the result of flattening non-dictionary iterables
@@ -180,8 +187,10 @@ def flatten(items):
         i += 1
     return first_type(items)
 
+
 def str_to_bool(str):
     return str.lower() in ['1', 'true', 't', 'y', 'yes']
+
 
 def fromXML(src):
     """
@@ -224,39 +233,47 @@ def fromXML(src):
     This function is inspired by David Mertz' Gnosis objectify utilities. The motivation of writing this recipe in its simplicity. With just 100 lines of code packaged into a single function, it can easily be embedded with other code for ease of distribution.
     """
 
-
     if isinstance(src, unicode):
-        #try to take it down to a string if necessary. It may generate an error, but it would throw an error
+        # try to take it down to a string if necessary. It may generate an error, but it would throw an error
         # anyhow if we tried to run with a unicode string
         src = str(src)
 
     non_id_char = re.compile('[^_0-9a-zA-Z]')
+
     def _name_mangle(name):
         return non_id_char.sub('_', name)
 
     class DataNode(object):
+
         def __init__(self):
             self._attrs = {}    # XML attributes and child elements
             self.data = None    # child text data
+
         def __len__(self):
             # treat single element as a list of 1
             return 1
+
         def __getitem__(self, key):
             if isinstance(key, basestring):
                 return self._attrs.get(key, None)
             else:
                 return [self][key]
+
         def __setitem__(self, key, value):
             self._attrs[key] = value
+
         def __contains__(self, name):
             return self._attrs.has_key(name)
+
         def __nonzero__(self):
             return bool(self._attrs or self.data)
+
         def __getattr__(self, name):
             if name.startswith('__'):
                 # need to do this for Python special methods???
                 raise AttributeError(name)
             return self._attrs.get(name, None)
+
         def _add_xml_attr(self, name, value):
             if name in self._attrs:
                 # multiple attribute of the same name are represented by a list
@@ -267,10 +284,13 @@ def fromXML(src):
                 children.append(value)
             else:
                 self._attrs[name] = value
+
         def __str__(self):
             return self.data or ''
+
         def __unicode__(self):
             return unicode(self.data) or u''
+
         def __repr__(self):
             items = sorted(self._attrs.items())
             if self.data:
@@ -278,11 +298,13 @@ def fromXML(src):
             return u'{%s}' % ', '.join([u'%s:%s' % (k, repr(v)) for k, v in items])
 
     class TreeBuilder(xml.sax.handler.ContentHandler):
+
         def __init__(self):
             self.stack = []
             self.root = DataNode()
             self.current = self.root
             self.text_parts = []
+
         def startElement(self, name, attrs):
             self.stack.append((self.current, self.text_parts))
             self.current = DataNode()
@@ -290,6 +312,7 @@ def fromXML(src):
             # xml attributes --> python attributes
             for k, v in attrs.items():
                 self.current._add_xml_attr(_name_mangle(k), v)
+
         def endElement(self, name):
             text = ''.join(self.text_parts).strip()
             if text:
@@ -301,6 +324,7 @@ def fromXML(src):
                 obj = text or ''
             self.current, self.text_parts = self.stack.pop()
             self.current._add_xml_attr(_name_mangle(name), obj)
+
         def characters(self, content):
             self.text_parts.append(content)
 
@@ -311,6 +335,7 @@ def fromXML(src):
         xml.sax.parse(src, builder)
     return builder.root._attrs.values()[0]
 
+
 def isDirty(model, field_name):
     """)
     Compares a given model instance with the DB and tells you whether or not it has been altered since the last save()
@@ -319,15 +344,16 @@ def isDirty(model, field_name):
     try:
         db_entry = model.__class__.objects.get(id=model.id)
     except ObjectDoesNotExist:
-        raise Exception("A serious error has occurred in db_utils.isDirty(). A model instance was passed that doesn't exist.")
+        raise Exception(
+            "A serious error has occurred in db_utils.isDirty(). A model instance was passed that doesn't exist.")
 
     db_data = str(db_entry.__dict__.get(field_name, ''))
     model_data = str(model.__dict__.get(field_name, ''))
     return re.sub('[\r\n\ ]+', '', db_data) != re.sub('[\r\n\ ]+', '', model_data)
 
 
-
 class JSONField(models.TextField):
+
     """JSONField is a generic textfield that neatly serializes/unserializes
     JSON objects seamlessly"""
 
@@ -359,9 +385,11 @@ class JSONField(models.TextField):
 
         return super(JSONField, self).get_db_prep_save(value, connection)
 
+
 def geo_from_ip(ip):
-    geo =  simplejson.loads(urllib2.urlopen(GEOIP_URL % ip).read())
+    geo = simplejson.loads(urllib2.urlopen(GEOIP_URL % ip).read())
     return geo['lng'], geo['lat']
+
 
 def get_one_if(seq, func):
     ret = [i for i in seq if func(i)]
@@ -369,7 +397,9 @@ def get_one_if(seq, func):
         return ret[0]
     return None
 
+
 class DateTimeAwareJSONEncoder(simplejson.JSONEncoder):
+
     """
     JSONEncoder subclass that knows how to encode date/time types
     """
@@ -389,16 +419,16 @@ class DateTimeAwareJSONEncoder(simplejson.JSONEncoder):
         else:
             return super(DateTimeAwareJSONEncoder, self).default(o)
 
-def flat_earth_distance(lng1, lat1, lng2, lat2):
-    #calculate distance, ignoring curvature of the earth
-    #based on 'Equirectangular approximation' described here: http://www.movable-type.co.uk/scripts/latlong.html'
-    earth_radius= 6371000 # in meters
-    p1 = (lng2 - lng1) * math.cos( 0.5 * (lat1 + lat2))
-    p2 = (lat2 - lat1)
-    return earth_radius * math.sqrt(p1*p1 + p2*p2)
 
-from south.modelsinspector import add_introspection_rules
-add_introspection_rules([], ["services.utils.JSONField"])
+def flat_earth_distance(lng1, lat1, lng2, lat2):
+    # calculate distance, ignoring curvature of the earth
+    # based on 'Equirectangular approximation' described here: http://www.movable-type.co.uk/scripts/latlong.html'
+    earth_radius = 6371000  # in meters
+    p1 = (lng2 - lng1) * math.cos(0.5 * (lat1 + lat2))
+    p2 = (lat2 - lat1)
+    return earth_radius * math.sqrt(p1 * p1 + p2 * p2)
+
+
 
 def direct_to_template(template, context={}):
     return lambda request: render(request, template, context)

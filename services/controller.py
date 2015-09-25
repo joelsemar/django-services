@@ -45,7 +45,7 @@ class BaseController(object):
                     request.DELETE = QueryDict(request.META['QUERY_STRING'])
                     request.POST = QueryDict({})
 
-         
+
 
         method_name = self.callmap.get(request_method, '')
 

@@ -1,6 +1,5 @@
 import simplejson
 import datetime
-from services import  utils
 from django.db import models
 
 
@@ -29,7 +28,7 @@ class StoredHandlerRequest(models.Model):
         if self.auth_test:
             ret['auth_test'] = self.auth_test
         if self.create_user_test:
-            ret['create_user_test'] =  self.create_user_test
+            ret['create_user_test'] = self.create_user_test
         return simplejson.dumps(ret)
 
     class Meta:
@@ -42,10 +41,10 @@ class StoredHttpParam(models.Model):
     request = models.ForeignKey(StoredHandlerRequest)
 
     def __unicode__(self):
-        return "%s %s: %s=%s" %(self.request.method, self.request.path, self.name, self.value)
+        return "%s %s: %s=%s" % (self.request.method, self.request.path, self.name, self.value)
 
     def dict(self):
-        return {'name': self.name, 'value':self.value}
+        return {'name': self.name, 'value': self.value}
 
 
 class APIChangeLogEntry(models.Model):
