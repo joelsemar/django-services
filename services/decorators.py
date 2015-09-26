@@ -3,13 +3,14 @@ from services import utils
 from services.view import BaseView
 import datetime
 
+
 def ranged(decorated_function):
     def new_function(*args, **kwargs):
         for arg in args:
             if hasattr(arg, 'GET'):
                 request = arg
-        since = utils.default_time_parse(request.GET.get('from_date','')) or datetime.datetime(1970, 1, 1)
-        until = utils.default_time_parse(request.GET.get('to_date','')) or utils.today()
+        since = utils.default_time_parse(request.GET.get('from_date', '')) or datetime.datetime(1970, 1, 1)
+        until = utils.default_time_parse(request.GET.get('to_date', '')) or utils.today()
         args = list(args)
         query = {"date": {'$lte': until, '$gte': since}}
         args.append(query)
@@ -18,6 +19,7 @@ def ranged(decorated_function):
     if hasattr(decorated_function, '_view'):
         new_function._view = decorated_function._view
     return new_function
+
 
 def render_with(view):
     def decorator(decorated_function):
@@ -30,7 +32,8 @@ def render_with(view):
 
 
 def login_required(decorated_function):
-    decorated_function.login_required = True #for documentation purposes
+    decorated_function.login_required = True  # for documentation purposes
+
     @wraps(decorated_function)
     def new_function(*args, **kwargs):
         try:
@@ -48,8 +51,10 @@ def login_required(decorated_function):
 
     return new_function
 
+
 def superuser_only(decorated_function):
-    decorated_function.login_required = True #for documentation purposes
+    decorated_function.login_required = True  # for documentation purposes
+
     @wraps(decorated_function)
     def new_function(*args, **kwargs):
         try:
@@ -66,20 +71,4 @@ def superuser_only(decorated_function):
 
     return new_function
 
-from django.db import transaction
 
-def transaction_commit_manually_wrapper(decorated_function):
-    """Wrapper to transaction.commit_manually so that we can reraise any
-    uncaught exception instead of getting TransactionManagementError.
-
-    Ref - https://code.djangoproject.com/ticket/6623
-    """
-    @transaction.commit_manually
-    def new_function(*args, **kwargs):
-        try:
-            return decorated_function(*args, **kwargs)
-        except Exception:
-            transaction.rollback()
-            raise
-
-    return new_function

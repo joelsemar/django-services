@@ -2,29 +2,29 @@ from services.apps.json_field.forms import JSONFormField
 
 from django.db import models
 from django.utils import simplejson as json
-from django.core import exceptions
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils.translation import ugettext as _
 from django.core.exceptions import ImproperlyConfigured
 
 import re
 import decimal
-from datetime import datetime
 try:
     from dateutil import parser as date_parser
 except ImportError:
     raise ImproperlyConfigured('The "dateutil" library is required and was not found.')
 
 try:
-    JSON_DECODE_ERROR = json.JSONDecodeError # simplejson
+    JSON_DECODE_ERROR = json.JSONDecodeError  # simplejson
 except AttributeError:
-    JSON_DECODE_ERROR = ValueError # other
+    JSON_DECODE_ERROR = ValueError  # other
 
 TIME_RE = re.compile(r'^\d{2}:\d{2}:\d{2}')
 DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}(?!T)')
 DATETIME_RE = re.compile(r'^\d{4}-\d{2}-\d{2}T')
 
+
 class JSONDecoder(json.JSONDecoder):
+
     """ Recursive JSON to Python deserialization. """
 
     _recursable_types = [str, unicode, list, dict]
@@ -66,7 +66,9 @@ class JSONDecoder(json.JSONDecoder):
                     pass
         return obj
 
+
 class JSONField(models.TextField):
+
     """ Stores and loads valid JSON objects. """
 
     __metaclass__ = models.SubfieldBase
@@ -85,9 +87,9 @@ class JSONField(models.TextField):
         encoder_kwargs = kwargs.pop('encoder_kwargs', {})
         decoder_kwargs = kwargs.pop('decoder_kwargs', {})
         if not encoder_kwargs and encoder:
-            encoder_kwargs.update({'cls':encoder})
+            encoder_kwargs.update({'cls': encoder})
         if not decoder_kwargs and decoder:
-            decoder_kwargs.update({'cls':decoder})
+            decoder_kwargs.update({'cls': decoder})
         self.encoder_kwargs = encoder_kwargs
         self.decoder_kwargs = decoder_kwargs
 
@@ -102,7 +104,7 @@ class JSONField(models.TextField):
         return super(JSONField, self).db_type(connection)
 
     def to_python(self, value):
-        if value is None: # allow blank objects
+        if value is None:  # allow blank objects
             return None
         if isinstance(value, basestring):
             try:
@@ -149,4 +151,3 @@ try:
     add_introspection_rules([], ['^services\.apps\.json_field\.fields\.JSONField'])
 except ImportError:
     pass
-

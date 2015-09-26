@@ -1,11 +1,8 @@
-import time
-import datetime
 import logging
-import socket
+import json
 from django.conf import settings
 from django.views.decorators.vary import vary_on_headers
 from django.http import HttpResponse, HttpResponseNotAllowed, QueryDict
-from django.db import connection
 from django.utils.importlib import import_module
 
 from services.utils import generic_exception_handler
@@ -13,7 +10,7 @@ from services.view import BaseView
 try:
     from services.apps.ops import tasks as ops_tasks
 except:
-    ops_tasks = None # no celery
+    ops_tasks = None  # no celery
 
 
 class BaseController(object):
@@ -26,13 +23,14 @@ class BaseController(object):
     }
 
     request_logger = logging.getLogger('default')
+
     @vary_on_headers('Authorization')
     def __call__(self, request, *args, **kwargs):
         request_method = request.method.upper()
         if request.META.get('CONTENT_TYPE') == 'application/json':
             self.process_json_body(request)
 
-        #django doesn't know PUT
+        # django doesn't know PUT
         else:
             if request_method == "PUT":
                 request.PUT = QueryDict(request.raw_post_data)
@@ -45,8 +43,6 @@ class BaseController(object):
                     request.DELETE = QueryDict(request.META['QUERY_STRING'])
                     request.POST = QueryDict({})
 
-
-
         method_name = self.callmap.get(request_method, '')
 
         if not hasattr(self, method_name):
@@ -58,16 +54,15 @@ class BaseController(object):
             try:
                 self.run_validator(request, mapped_method._validator_class)
             except ValidationError as e:
-                return  BaseView().add_errors(str(e))
+                return BaseView().add_errors(str(e))
 
         if not mapped_method:
             return HttpResponse("Not Found", status=404)
 
-
-        #decorators attach the View class to the method itself as '_view', first look there
+        # decorators attach the View class to the method itself as '_view', first look there
         method_view = getattr(mapped_method, '_view', None)
 
-        #or the controller has a default view property
+        # or the controller has a default view property
         if not method_view:
             method_view = self.view
 
@@ -75,9 +70,9 @@ class BaseController(object):
         if method_view.__class__ == type:
             view = method_view(request=request)
 
-        #the user has given us an instantiated instance @render_with(QuerySetView(model_view=MyModelView))
+        # the user has given us an instantiated instance @render_with(QuerySetView(model_view=MyModelView))
         # we have to reset it and attach the request object to it
-        elif  isinstance(method_view, self.view):
+        elif isinstance(method_view, self.view):
             view = method_view
             view.reset(request)
 
@@ -89,10 +84,10 @@ class BaseController(object):
         except Exception, e:
             return self.error_handler(e, request, mapped_method)
 
-        #Allow mapped_method to respond with a view and override ours
+        # Allow mapped_method to respond with a view and override ours
         response = response or view
 
-        #user has replaced baseview with something else (likely HttpResponse or HttpREsponseRedirect), we are done
+        # user has replaced baseview with something else (likely HttpResponse or HttpREsponseRedirect), we are done
         if not isinstance(response, BaseView):
             return response
 
@@ -109,7 +104,6 @@ class BaseController(object):
             response = cls().process_response(request, response)
         return response
 
-
     def error_handler(self, e, request, mapped_method):
         return generic_exception_handler(request, e)
 
@@ -121,5 +115,3 @@ class BaseController(object):
                 request[request_method] = QueryDict(json_data)
         except:
             raise Exception('Invalid JSON data')
-
-

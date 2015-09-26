@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from django.contrib.sessions.models import Session
 
+
 class GenericUserController(BaseController):
 
     def __init__(self):
@@ -33,7 +34,6 @@ class GenericUserController(BaseController):
         profile = request.user.get_profile()
         response.set(instance=profile)
 
-    @transaction.commit_on_success
     def create(self, request, response):
         """
         Create a new user
@@ -72,13 +72,13 @@ class GenericUserController(BaseController):
 
         if user:
             login(request, user)
-            return response.set(user={'username':user.username, 'id' :profile.id})
+            return response.set(user={'username': user.username, 'id': profile.id})
 
         transaction.rollback()
         return response.add_errors('User creation failed', status=500)
 
     @render_with(ModelView)
-    @transaction.commit_on_success
+    @transaction.atomic
     def update(self, request, response):
         """
         Update the logged in user
@@ -88,14 +88,13 @@ class GenericUserController(BaseController):
         profile_form = self.profile_form(request.PUT, request.FILES, instance=profile)
         user_form = self.user_form(request.PUT, instance=request.user)
 
-
         if profile_form.is_valid():
-           user_profile =  profile_form.save()
+            user_profile = profile_form.save()
         else:
             response.add_errors(self.format_errors(profile_form))
 
         if user_form.is_valid():
-           user_form.save()
+            user_form.save()
         else:
             response.add_errors(self.format_errors(user_form))
 
@@ -103,8 +102,7 @@ class GenericUserController(BaseController):
             transaction.rollback()
             return
 
-        response.set(instance=user_profile);
-
+        response.set(instance=user_profile)
 
 
 class LoginController(BaseController):
@@ -125,7 +123,7 @@ class LoginController(BaseController):
             @email [email] user's email address
             @errors [list] insufficient_credentials, invalid_credentials
         """
-        #all calls to this handler via '/logout should..
+        # all calls to this handler via '/logout should..
         if request.path.startswith('/logout'):
             return self.read(request, response)
 
@@ -149,7 +147,7 @@ class LoginController(BaseController):
             if single_session:
                 [s.delete() for s in Session.objects.all() if s.get_decoded().get('_auth_user_id') == user.id]
             login(request, user)
-            response.set(user={'username':username, 'id':user.id, 'email': user.email})
+            response.set(user={'username': username, 'id': user.id, 'email': user.email})
 
         else:
             return response.add_errors(errors='invalid_credentials', status=401)
@@ -160,7 +158,6 @@ class LoginController(BaseController):
         API Handler: GET /logout
         """
         logout(request)
-
 
     def update(self, request, response):
         """
@@ -177,5 +174,3 @@ class LoginController(BaseController):
         API Handler: DELETE /logout
         """
         return self.read(request, response)
-
-
