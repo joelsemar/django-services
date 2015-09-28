@@ -100,8 +100,9 @@ function create_test(handler, method){
     var data;
     var headers = {};
     for (var i=0;i<form.length;i++){
-        if(form[i].name === "raw_post_body"){
-            data = $(form[i]).val()
+        if(form[i].name === "body"){
+            data = $(form[i]).val();
+            headers['Content-Type'] = "application/json";
         }
     }
     if (!data){

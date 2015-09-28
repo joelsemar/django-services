@@ -1,9 +1,11 @@
 import logging
 import json
+import inspect
 from django.conf import settings
-from django.views.decorators.vary import vary_on_headers
 from django.http import HttpResponse, HttpResponseNotAllowed, QueryDict
 from django.utils.importlib import import_module
+from django.db.models import Model as DjangoModel
+from django.core.exceptions import ObjectDoesNotExist
 
 from services.utils import generic_exception_handler
 from services.view import BaseView
@@ -24,70 +26,56 @@ class BaseController(object):
 
     request_logger = logging.getLogger('default')
 
-    @vary_on_headers('Authorization')
     def __call__(self, request, *args, **kwargs):
-        request_method = request.method.upper()
+
         if request.META.get('CONTENT_TYPE') == 'application/json':
             self.process_json_body(request)
 
-        # django doesn't know PUT
         else:
-            if request_method == "PUT":
-                request.PUT = QueryDict(request.raw_post_data)
-                request.request_id = request.PUT.get('request_id')
-                request.POST = QueryDict({})
+            self.fix_delete_and_put(request)
 
-            if request_method == "DELETE":
-                request.DELETE = QueryDict(request.raw_post_data)
-                if not request.DELETE.keys():
-                    request.DELETE = QueryDict(request.META['QUERY_STRING'])
-                    request.POST = QueryDict({})
-
-        method_name = self.callmap.get(request_method, '')
-
-        if not hasattr(self, method_name):
-            return HttpResponseNotAllowed([method for method in self.callmap.keys() if hasattr(self, method)])
-
-        mapped_method = getattr(self, method_name, None)
-
-        if hasattr(mapped_method, '_validator_class'):
-            try:
-                self.run_validator(request, mapped_method._validator_class)
-            except ValidationError as e:
-                return BaseView().add_errors(str(e))
-
+        mapped_method = self.get_mapped_method(request)
         if not mapped_method:
             return HttpResponse("Not Found", status=404)
 
-        # decorators attach the View class to the method itself as '_view', first look there
-        method_view = getattr(mapped_method, '_view', None)
+        auth_result = self.auth_check(request, mapped_method)
 
-        # or the controller has a default view property
-        if not method_view:
-            method_view = self.view
+        if auth_result:
+            return auth_result
 
-        # the user has given us a class @render_with(QuerySetView)
-        if method_view.__class__ == type:
-            view = method_view(request=request)
-
-        # the user has given us an instantiated instance @render_with(QuerySetView(model_view=MyModelView))
-        # we have to reset it and attach the request object to it
-        elif isinstance(method_view, self.view):
-            view = method_view
-            view.reset(request)
-
-        else:
-            raise Exception("Invalid View")
         try:
-            response = mapped_method(request, view, *args, **kwargs)
+            if self.has_body_param(mapped_method):
+                body_param = self.build_payload(request, mapped_method)
+                if body_param:
+                    args = self.insert_into_arglist(args, body_param)
 
-        except Exception, e:
-            return self.error_handler(e, request, mapped_method)
+            elif self.has_updates_param(mapped_method):
+                self.build_updates_param(request, mapped_method, kwargs)
+
+            elif self.uses_entity(mapped_method):
+                self.set_entity_param(request, mapped_method, kwargs)
+
+            kwargs = self.set_query_params_to_kwargs(request, mapped_method, kwargs)
+
+        except ObjectDoesNotExist:
+            return self.view().not_found().serialize()
+
+        view = self.get_view(request, mapped_method)
+        if view:
+            args = self.insert_into_arglist(args, view)
+
+        args = self.insert_into_arglist(args, request)
+
+      #  try:
+        response = mapped_method(*args, **kwargs)
+
+      #  except Exception, e:
+      #      return self.error_handler(e, request, mapped_method)
 
         # Allow mapped_method to respond with a view and override ours
         response = response or view
 
-        # user has replaced baseview with something else (likely HttpResponse or HttpREsponseRedirect), we are done
+        # user has replaced baseview with something else (likely HttpResponse or HttpResponseRedirect), we are done
         if not isinstance(response, BaseView):
             return response
 
@@ -108,10 +96,156 @@ class BaseController(object):
         return generic_exception_handler(request, e)
 
     def process_json_body(self, request):
-        request_method = request.method.upper()
         try:
-            json_data = json.loads(request.body)
-            if request_method != 'GET':
-                request[request_method] = QueryDict(json_data)
+            request.payload = json.loads(request.body)
         except:
             raise Exception('Invalid JSON data')
+
+    def get_view(self, request, mapped_method):
+        # decorators attach the View class to the method itself as '_view', first look there
+        method_view = getattr(mapped_method, '_view', None)
+
+        # or the controller has a default view property
+        if not method_view:
+            method_view = self.view
+
+        if not method_view:
+            return None
+
+        # the user has given us a class @render_with(QuerySetView)
+        if method_view.__class__ == type and BaseView in inspect.getmro(method_view):
+            view = method_view(request=request)
+
+        # the user has given us an instantiated instance @render_with(QuerySetView(model_view=MyModelView))
+        # we have to reset it and attach the request object to it
+        elif isinstance(method_view, self.view):
+            view = method_view
+            view.reset(request)
+
+        else:
+            raise Exception("Invalid view argument %s, must extend BaseView" % method_view)
+
+        return view
+
+    def build_payload(self, request, mapped_method):
+        body_param_class = getattr(mapped_method, '_body_param_class', None)
+        hidden_fields = getattr(body_param_class, '_hides', [])
+        if not body_param_class:
+            return None
+
+        if not request.payload:
+            return None
+
+        if DjangoModel in inspect.getmro(body_param_class):
+            return self.build_model_body_param(request, mapped_method, body_param_class)
+
+        body_param = body_param_class()
+        provided_fields = [f for f in dir(body_param) if not f.startswith("_")]
+
+        # just using a basic Payload object, no properties defined
+        if not provided_fields:
+            for key, value in request.payload.items():
+                setattr(body_param, key, value)
+
+        # here our payload class has properties defined, we just grab those
+        else:
+            for field in provided_fields:
+                if request.payload.get(field) and field not in hidden_fields:
+                    setattr(body_param, field, request.payload.get(field))
+
+        return body_param
+
+    def build_model_body_param(self, request, mapped_method, body_param_class):
+        body_param = body_param_class()
+        for field in body_param_class._meta.fields:
+            # in some cases these are not the same (eg ForeignKey fields)
+            # so the client can send us "related_model_name" and we will set the attribute "related_model_name_id"
+            field_attname = field.attname
+            field_name = field.name
+
+            if field.primary_key:
+                continue
+
+            if request.payload.get(field_name) != None:
+                setattr(body_param, field_attname, request.payload.get(field_name))
+
+        return body_param
+
+    def build_updates_param(self, request, method, kwargs):
+        model_instance = self.get_model_instance(method, "_updates_model", "_updates_model_arg", kwargs)
+        old_entity = model_instance.__class__()
+        for field in model_instance._meta.fields:
+            setattr(old_entity, field.name, getattr(model_instance, field))
+
+        if model_instance and request.payload:
+            for field in model_instance._meta.fields:
+                if request.payload.get(field.name) != None:
+                    setattr(model_instance, field.name, request.payload[field.name])
+
+            model_instance._old = old_entity
+            updates_model_arg = getattr(method, '_updates_model_arg')
+            kwargs[updates_model_arg] = model_instance
+
+    def set_entity_param(self, request, method, kwargs):
+        model_instance = self.get_model_instance(method, "_entity_model", "_entity_model_arg", kwargs)
+        if model_instance:
+            entity_model_arg = getattr(method, '_entity_model_arg')
+            kwargs[entity_model_arg] = model_instance
+
+    def get_model_instance(self, method, model_arg_type, arg_type, kwargs):
+        if hasattr(method, model_arg_type):
+            model_class = getattr(method, model_arg_type)
+            model_arg = getattr(method, arg_type)
+            return model_class.objects.get(id=kwargs[model_arg])
+
+    def fix_delete_and_put(self, request):
+        if request.method == "put":
+            request.PUT = QueryDict(request.raw_post_data)
+            request.request_id = request.PUT.get('request_id')
+            request.POST = QueryDict({})
+
+        if request.method == "delete":
+            request.DELETE = QueryDict(request.raw_post_data)
+            if not request.DELETE.keys():
+                request.DELETE = QueryDict(request.META['QUERY_STRING'])
+                request.POST = QueryDict({})
+
+    def get_mapped_method(self, request):
+        request_method = request.method.upper()
+        method_name = self.callmap.get(request_method, request.method)
+
+        if not hasattr(self, method_name):
+            return HttpResponseNotAllowed([method for method in self.callmap.keys() if hasattr(self, method)])
+
+        return getattr(self, method_name, None)
+
+    def set_query_params_to_kwargs(self, request, method, keyword_args):
+        argsppec = inspect.getargspec(method)
+        if not argsppec.defaults:
+            return keyword_args
+        kwarg_names = argsppec.args[-len(argsppec.defaults):]
+        for name in kwarg_names:
+            if request.GET.get(name) != None:
+                keyword_args[name] = request.GET.get(name)
+
+        return keyword_args
+
+    def insert_into_arglist(self, arglist, item):
+        arglist = list(arglist)
+        arglist.insert(0, item)
+        return tuple(arglist)
+
+    def auth_check(self, request, method):
+        if not hasattr(method, '_unauthenticated') and not request.user.is_authenticated():
+            response = self.view()
+            response.add_errors('401 -- Unauthorized', status=401)
+            return response.serialize()
+
+    def has_body_param(self, method):
+        return hasattr(method, '_body_param_class')
+
+    def uses_entity(self, method):
+        return hasattr(method, "_entity_model") and hasattr(method, "_entity_model_arg")
+
+    def has_updates_param(self, method):
+        return hasattr(method, "_updates_model") and hasattr(method, "_updates_model_arg")

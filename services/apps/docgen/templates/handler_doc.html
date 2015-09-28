@@ -5,6 +5,11 @@
             <div style='margin-top:25px;'>
                 <b style='color:red;'>{{method.request_method}}</b>
                 {{method.url}}
+            {% if method.body_param_class %}
+                <br/>
+                <b style="color:black">RequestBody: </b> {{method.body_param_class}}
+            {% endif %}
+
             </div>
         </a>
         <p>
@@ -12,7 +17,8 @@
             {{method.comment}}
             {% endautoescape %}
         </p>
-        {% if method.auth_required %} <i style='margin-left:30px'>Requires Authentication</i>{% endif %}
+        {% if method.auth_required %} 
+        <i>Requires Authentication</i><br/>{% endif %}
         {% if method.params %}
         <p>
             <strong>Parameters</strong>
@@ -32,13 +38,11 @@
         <br/>
         <form class="newTestForm" id="{{handler.name}}{{method.request_method}}_form" role="form" style="width:40%">
             <input type="text" class="form-control" id="{{handler.name}}{{method.request_method}}_url" size=30 value="{{method.url}}"><br/>
+            {% if method.body_param_class %}
+                <textarea name="body" rows=15 cols=50>{{method.test_payload}}</textarea><br/>
+            {% endif %}
             {% for param in method.params %}
-              {% if param.name == 'raw_post_body' %}
-
-                <div class='param_label'> {{param.name}}:</div> <textarea name="{{param.name}}" rows=15 cols=50></textarea><br/>
-               {% else %}
                <input type='text'class="form-control" placeholder="{{param.name}}" size=30></input><br/>
-               {% endif%}
             {% endfor %}
             <button type="button" onclick="create_test('{{handler.name}}','{{method.request_method}}')">Send</button>
 

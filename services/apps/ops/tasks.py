@@ -3,7 +3,6 @@ from celery import task
 from services.apps.ops.models import EventLog
 
 
-
 @task()
 def log_api_interaction(**kwargs):
 
@@ -13,13 +12,10 @@ def log_api_interaction(**kwargs):
     event.session_id = kwargs.get('session_id')
     event.host = kwargs.get('host')
     event.path = kwargs.get('path')
-    event.request_method =  kwargs.get('request_method')
+    event.request_method = kwargs.get('request_method')
     event.query_string = kwargs.get('query_string')
     event.request_body = kwargs.get('request_body')
     event.response_body = kwargs.get('response_body')
     event.status_code = str(kwargs.get('status_code', ''))[:4]
     event.when = kwargs.get('when')
     event.save()
-
-
-

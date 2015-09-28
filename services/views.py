@@ -46,13 +46,13 @@ class BaseView(object):
         if isinstance(errors, basestring):
             # just a single error
             self._errors.append(errors)
-            return
+            return self
 
         elif isinstance(errors, list):
             # a list of errors
             for error in errors:
                 self._errors.append(error)
-            return
+            return self
         raise TypeError("Argument 'errors' must be of type 'string' or 'list'")
 
     def add_messages(self, messages):
@@ -70,6 +70,7 @@ class BaseView(object):
 
     def set(self, **kwargs):
         self._data.update(kwargs)
+        return self
 
     def __setattr__(self, key, value):
         if not hasattr(self, key):
@@ -83,6 +84,7 @@ class BaseView(object):
     def set_status(self, status):
         assert isinstance(status, int)
         self._status = status
+        return self
 
     def render(self, request):
         return self._data

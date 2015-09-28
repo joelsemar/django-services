@@ -108,8 +108,7 @@ def generic_exception_handler(request, exception):
     }
     )
 
-    if transaction.is_dirty():
-        transaction.rollback()
+    transaction.rollback()
 
     return response.serialize()
 
@@ -429,6 +428,9 @@ def flat_earth_distance(lng1, lat1, lng2, lat2):
     return earth_radius * math.sqrt(p1 * p1 + p2 * p2)
 
 
-
 def direct_to_template(template, context={}):
     return lambda request: render(request, template, context)
+
+
+class Payload(object):
+    pass
