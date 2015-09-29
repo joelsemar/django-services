@@ -59,11 +59,11 @@ def superuser_only(decorated_function):
     return new_function
 
 
-def body(model_class):
-    return tag_function('_body_param_class', model_class)
+def body(model_class, arg='body'):
+    return multitag_function(['_body_param_class', '_body_param_arg'], [model_class, arg])
 
 
-def entity(model_class, arg=''):
+def entity(model_class, arg='entity'):
     return multitag_function(['_entity_model', '_entity_model_arg'], [model_class, arg])
 
 

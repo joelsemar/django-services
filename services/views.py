@@ -5,6 +5,7 @@ from django.http import HttpResponse
 
 from django.conf import settings
 from django.core.paginator import EmptyPage, Paginator
+from services.utils import camel_dict
 
 JSON_INDENT = 4
 
@@ -150,6 +151,9 @@ class BaseView(object):
             else:
                 response_dict = self._render(self._request)
 
+        if getattr(self._request, 'camel_case', False):
+            response_dict = camel_dict(response_dict)
+
         if settings.DEBUG or self._request.REQUEST.get('pretty_print'):
             response_body = simplejson.dumps(response_dict, cls=DateTimeAwareJSONEncoder, indent=JSON_INDENT)
         else:
@@ -258,7 +262,7 @@ class QuerySetView(BaseView):
         ret = [self.model_view.render_instance(obj, request) for obj in results]
         ret = self.sort(ret, request)
 
-        return {self.queryset_label: results, 'paging': paging_dict}
+        return {self.queryset_label: ret, 'paging': paging_dict}
 
     @classmethod
     def inline_render(cls, queryset, request):
@@ -304,6 +308,7 @@ class QuerySetView(BaseView):
         page_dict = {'page': page_number,
                      'next_page': next_page,
                      'previous_page': previous_page,
+                     'total_count': len(results),
                      'total_pages': pages.num_pages}
 
         return results, page_dict

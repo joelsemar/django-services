@@ -42,7 +42,7 @@
                 <textarea name="body" rows=15 cols=50>{{method.test_payload}}</textarea><br/>
             {% endif %}
             {% for param in method.params %}
-               <input type='text'class="form-control" placeholder="{{param.name}}" size=30></input><br/>
+               <input type='text'class="form-control" name="{{param.name}}" placeholder="{{param.name}}" size=30></input><br/>
             {% endfor %}
             <button type="button" onclick="create_test('{{handler.name}}','{{method.request_method}}')">Send</button>
 

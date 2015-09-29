@@ -7,8 +7,9 @@ from django.utils.importlib import import_module
 from django.db.models import Model as DjangoModel
 from django.core.exceptions import ObjectDoesNotExist
 
-from services.utils import generic_exception_handler
+from services.utils import generic_exception_handler, un_camel_dict, un_camel
 from services.view import BaseView
+from services.models import ModelDTO
 try:
     from services.apps.ops import tasks as ops_tasks
 except:
@@ -28,6 +29,7 @@ class BaseController(object):
 
     def __call__(self, request, *args, **kwargs):
 
+        request.camel_case = request.META.get("X-SERVICES-CAMEL") != None or request.GET.get("_camel")
         if request.META.get('CONTENT_TYPE') == 'application/json':
             self.process_json_body(request)
 
@@ -98,8 +100,10 @@ class BaseController(object):
     def process_json_body(self, request):
         try:
             request.payload = json.loads(request.body)
-        except:
-            raise Exception('Invalid JSON data')
+            if getattr(request, 'camel_case', False):
+                request.payload = un_camel_dict(request.payload)
+        except Exception as e:
+            raise Exception('Invalid JSON data ' + e.message)
 
     def get_view(self, request, mapped_method):
         # decorators attach the View class to the method itself as '_view', first look there
@@ -173,16 +177,12 @@ class BaseController(object):
 
     def build_updates_param(self, request, method, kwargs):
         model_instance = self.get_model_instance(method, "_updates_model", "_updates_model_arg", kwargs)
-        old_entity = model_instance.__class__()
-        for field in model_instance._meta.fields:
-            setattr(old_entity, field.name, getattr(model_instance, field))
 
         if model_instance and request.payload:
             for field in model_instance._meta.fields:
                 if request.payload.get(field.name) != None:
                     setattr(model_instance, field.name, request.payload[field.name])
 
-            model_instance._old = old_entity
             updates_model_arg = getattr(method, '_updates_model_arg')
             kwargs[updates_model_arg] = model_instance
 
@@ -195,6 +195,10 @@ class BaseController(object):
     def get_model_instance(self, method, model_arg_type, arg_type, kwargs):
         if hasattr(method, model_arg_type):
             model_class = getattr(method, model_arg_type)
+            bases = inspect.getmro(model_class)
+            if ModelDTO in bases:
+                # Muhahahahah!!!
+                model_class = bases[bases.index(ModelDTO) + 1]
             model_arg = getattr(method, arg_type)
             return model_class.objects.get(id=kwargs[model_arg])
 
@@ -223,10 +227,11 @@ class BaseController(object):
         argsppec = inspect.getargspec(method)
         if not argsppec.defaults:
             return keyword_args
+
         kwarg_names = argsppec.args[-len(argsppec.defaults):]
         for name in kwarg_names:
             if request.GET.get(name) != None:
-                keyword_args[name] = request.GET.get(name)
+                keyword_args[un_camel(name)] = request.GET.get(name)
 
         return keyword_args
 

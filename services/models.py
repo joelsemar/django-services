@@ -22,3 +22,16 @@ class BaseModel(models.Model):
     def save(self, *args, **kwargs):
         self.last_modified = datetime.utcnow()
         super(BaseModel, self).save(*args, **kwargs)
+
+
+class ModelDTO(object):
+
+    def save(self, *args, **kwargs):
+        m = self.get_model_class()
+        for field in m._meta.fields:
+            setattr(m, field.name, getattr(self, field.name, None))
+        m.save(*args, **kwargs)
+        return m
+
+    def get_model_class(self):
+        return self.__class__.__bases__[1]()

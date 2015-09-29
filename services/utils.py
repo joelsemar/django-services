@@ -19,7 +19,6 @@ from django.db import models
 from django.core.serializers.json import DjangoJSONEncoder
 from django.shortcuts import render
 
-from services.view import BaseView
 import requests
 
 GOOGLE_GEOCODING_URL = "http://maps.googleapis.com/maps/api/geocode/json?sensor=false"
@@ -78,6 +77,7 @@ def str_from_location(location):
 
 
 def generic_exception_handler(request, exception):
+    from services.view import BaseView
     response = BaseView(request=request)
     _, _, tb = sys.exc_info()
     # we just want the last frame, (the one the exception was thrown from)
@@ -397,6 +397,12 @@ def get_one_if(seq, func):
     return None
 
 
+def get_first(seq):
+    if seq:
+        return seq[0]
+    return None
+
+
 class DateTimeAwareJSONEncoder(simplejson.JSONEncoder):
 
     """
@@ -434,3 +440,37 @@ def direct_to_template(template, context={}):
 
 class Payload(object):
     pass
+
+
+first_cap_re = re.compile('(.)([A-Z][a-z]+)')
+all_cap_re = re.compile('([a-z0-9])([A-Z])')
+
+
+def camel(value):
+    def camelcase():
+        yield str.lower
+        while True:
+            yield str.capitalize
+
+    c = camelcase()
+    return "".join(c.next()(x) if x else '_' for x in value.split("_"))
+
+
+def camel_dict(dictionary):
+    ret = {}
+    for k, v in dictionary.items():
+        ret[camel(k)] = v
+
+    return ret
+
+
+def un_camel(string):
+    s1 = first_cap_re.sub(r'\1_\2', string)
+    return all_cap_re.sub(r'\1_\2', s1).lower()
+
+
+def un_camel_dict(dictionary):
+    ret = {}
+    for key, value in dictionary.items():
+        ret[un_camel(key)] = value
+    return ret
