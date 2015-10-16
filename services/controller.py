@@ -154,8 +154,13 @@ class BaseController(object):
         # here our payload class has properties defined, we just grab those
         else:
             for field in provided_fields:
-                if request.payload.get(field) and field not in hidden_fields:
+                if field in hidden_fields:
+                    continue
+                if request.payload.get(field):
                     setattr(body_param, field, request.payload.get(field))
+                else:
+                    # use the Class.prop value as default
+                    setattr(body_param, field, getattr(body_param_class, field))
 
         return body_param
 

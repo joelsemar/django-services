@@ -40,6 +40,7 @@
             <input type="text" class="form-control" id="{{handler.name}}{{method.request_method}}_url" size=30 value="{{method.url}}"><br/>
             {% if method.body_param_class %}
                 <textarea name="body" rows=15 cols=50>{{method.test_payload}}</textarea><br/>
+                <div class="jsonlintError"> Error spot</div>
             {% endif %}
             {% for param in method.params %}
                <input type='text'class="form-control" name="{{param.name}}" placeholder="{{param.name}}" size=30></input><br/>

@@ -143,7 +143,7 @@ class ServerDeclaration():
         else:
             for prop in dir(body_param_class):
                 if not prop.startswith("_") and prop not in hidden_fields:
-                    ret[prop] = ""
+                    ret[prop] = getattr(body_param_class, prop)
 
         return json.dumps(ret, indent=4)
 

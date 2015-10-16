@@ -87,3 +87,12 @@ pre {
 
 }
 
+.jsonlintError{
+    background: #FBE3E4;
+    color: #D12F19;
+    border-color: #FBC2C4;
+    margin-bottom: 1em;
+    border: 2px solid #ddd;
+    padding: .8em;
+    display: none;
+}

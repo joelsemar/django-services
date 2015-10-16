@@ -1,5 +1,5 @@
 from django.forms import fields, util
-from django.utils import simplejson as json
+import json
 
 import datetime
 import decimal
