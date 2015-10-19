@@ -97,7 +97,7 @@ def generic_exception_handler(request, exception):
     error += '\n'
 
     response.add_errors(error)
-    logger = logging.getLogger('error')
+    logger = logging.getLogger('default')
     mail_logger = logging.getLogger('exception_email')
     logger.error(error_header + error)
     mail_logger.error('Internal Server Error: %s on %s', request.path, socket.gethostname(),

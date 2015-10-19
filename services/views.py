@@ -109,8 +109,8 @@ class BaseView(object):
     def bad_request(self, message="Bad Request"):
         return self.add_errors(message, status=400)
 
-    def not_found(self):
-        return self.add_errors("Not Found", status=404)
+    def not_found(self, message="Not Found"):
+        return self.add_errors(message, status=404)
 
     def created(self):
         return self.set_status(201)
@@ -278,6 +278,7 @@ class QuerySetView(BaseView):
 
     def auto_page(self, results, page_number=1, limit=10):
 
+        total_count = len(results)
         try:
             page_number = int(page_number)
             limit = int(limit)
@@ -308,7 +309,7 @@ class QuerySetView(BaseView):
         page_dict = {'page': page_number,
                      'next_page': next_page,
                      'previous_page': previous_page,
-                     'total_count': len(results),
+                     'total_count': total_count,
                      'total_pages': pages.num_pages}
 
         return results, page_dict

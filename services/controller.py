@@ -30,11 +30,8 @@ class BaseController(object):
     def __call__(self, request, *args, **kwargs):
 
         request.camel_case = request.META.get("X-SERVICES-CAMEL") != None or request.GET.get("_camel")
-        if request.META.get('CONTENT_TYPE') == 'application/json':
-            self.process_json_body(request)
-
-        else:
-            self.fix_delete_and_put(request)
+        self.fix_delete_and_put(request)
+        self.build_payload(request)
 
         mapped_method = self.get_mapped_method(request)
         if not mapped_method:
@@ -47,20 +44,20 @@ class BaseController(object):
 
         try:
             if self.has_body_param(mapped_method):
-                body_param = self.build_payload(request, mapped_method)
+                body_param = self.build_body_param(request, mapped_method)
                 if body_param:
                     args = self.insert_into_arglist(args, body_param)
 
-            elif self.has_updates_param(mapped_method):
+            if self.has_updates_param(mapped_method):
                 self.build_updates_param(request, mapped_method, kwargs)
 
-            elif self.uses_entity(mapped_method):
+            if self.uses_entity(mapped_method):
                 self.set_entity_param(request, mapped_method, kwargs)
 
             kwargs = self.set_query_params_to_kwargs(request, mapped_method, kwargs)
 
-        except ObjectDoesNotExist:
-            return self.view().not_found().serialize()
+        except EntityNotFoundException as e:
+            return self.view().not_found(str(e)).serialize()
 
         view = self.get_view(request, mapped_method)
         if view:
@@ -68,11 +65,11 @@ class BaseController(object):
 
         args = self.insert_into_arglist(args, request)
 
-      #  try:
-        response = mapped_method(*args, **kwargs)
+        try:
+            response = mapped_method(*args, **kwargs)
 
-      #  except Exception, e:
-      #      return self.error_handler(e, request, mapped_method)
+        except Exception, e:
+            return self.error_handler(e, request, mapped_method)
 
         # Allow mapped_method to respond with a view and override ours
         response = response or view
@@ -82,9 +79,7 @@ class BaseController(object):
             return response
 
         response = self.run_response_middleware(request, response)
-        response = response.serialize()
-
-        return response
+        return response.serialize()
 
     def run_response_middleware(self, request, response):
         for mstring in getattr(settings, 'SERVICES_MIDDLEWARE_CLASSES', []):
@@ -97,13 +92,19 @@ class BaseController(object):
     def error_handler(self, e, request, mapped_method):
         return generic_exception_handler(request, e)
 
-    def process_json_body(self, request):
-        try:
-            request.payload = json.loads(request.body)
-            if getattr(request, 'camel_case', False):
-                request.payload = un_camel_dict(request.payload)
-        except Exception as e:
-            raise Exception('Invalid JSON data ' + e.message)
+    def build_payload(self, request):
+        content_type = request.META.get("CONTENT_TYPE", "application/json")
+        if content_type == 'application/json':
+            try:
+                request.payload = json.loads(request.body)
+            except Exception as e:
+                raise Exception('Invalid JSON data ' + e.message)
+
+        elif content_type == "application/x-www-form-urlencoded":
+            request.payload = dict(getattr(request, request.method.upper, {}))
+
+        if getattr(request, 'camel_case', False):
+            request.payload = un_camel_dict(request.payload)
 
     def get_view(self, request, mapped_method):
         # decorators attach the View class to the method itself as '_view', first look there
@@ -131,7 +132,7 @@ class BaseController(object):
 
         return view
 
-    def build_payload(self, request, mapped_method):
+    def build_body_param(self, request, mapped_method):
         body_param_class = getattr(mapped_method, '_body_param_class', None)
         hidden_fields = getattr(body_param_class, '_hides', [])
         if not body_param_class:
@@ -141,7 +142,7 @@ class BaseController(object):
             return None
 
         if DjangoModel in inspect.getmro(body_param_class):
-            return self.build_model_body_param(request, mapped_method, body_param_class)
+            return self.build_model_body_payload(request, mapped_method, body_param_class)
 
         body_param = body_param_class()
         provided_fields = [f for f in dir(body_param) if not f.startswith("_")]
@@ -164,7 +165,7 @@ class BaseController(object):
 
         return body_param
 
-    def build_model_body_param(self, request, mapped_method, body_param_class):
+    def build_model_body_payload(self, request, mapped_method, body_param_class):
         body_param = body_param_class()
         for field in body_param_class._meta.fields:
             # in some cases these are not the same (eg ForeignKey fields)
@@ -181,7 +182,7 @@ class BaseController(object):
         return body_param
 
     def build_updates_param(self, request, method, kwargs):
-        model_instance = self.get_model_instance(method, "_updates_model", "_updates_model_arg", kwargs)
+        model_instance = self.get_model_instance(request, method, "_updates_model", "_updates_model_arg", kwargs)
 
         if model_instance and request.payload:
             for field in model_instance._meta.fields:
@@ -192,12 +193,12 @@ class BaseController(object):
             kwargs[updates_model_arg] = model_instance
 
     def set_entity_param(self, request, method, kwargs):
-        model_instance = self.get_model_instance(method, "_entity_model", "_entity_model_arg", kwargs)
+        model_instance = self.get_model_instance(request, method, "_entity_model", "_entity_model_arg", kwargs)
         if model_instance:
             entity_model_arg = getattr(method, '_entity_model_arg')
             kwargs[entity_model_arg] = model_instance
 
-    def get_model_instance(self, method, model_arg_type, arg_type, kwargs):
+    def get_model_instance(self, request, method, model_arg_type, arg_type, kwargs):
         if hasattr(method, model_arg_type):
             model_class = getattr(method, model_arg_type)
             bases = inspect.getmro(model_class)
@@ -205,7 +206,13 @@ class BaseController(object):
                 # Muhahahahah!!!
                 model_class = bases[bases.index(ModelDTO) + 1]
             model_arg = getattr(method, arg_type)
-            return model_class.objects.get(id=kwargs[model_arg])
+            try:
+                if kwargs.get(model_arg):
+                    return model_class.objects.get(id=kwargs[model_arg])
+                else:
+                    return model_class.objects.get(user=request.user)
+            except ObjectDoesNotExist:
+                raise EntityNotFoundException(model_arg + " not found.")
 
     def fix_delete_and_put(self, request):
         if request.method == "put":
@@ -248,8 +255,7 @@ class BaseController(object):
     def auth_check(self, request, method):
         if not hasattr(method, '_unauthenticated') and not request.user.is_authenticated():
             response = self.view()
-            response.add_errors('401 -- Unauthorized', status=401)
-            return response.serialize()
+            return response.add_errors('401 -- Unauthorized', status=401).serialize()
 
     def has_body_param(self, method):
         return hasattr(method, '_body_param_class')
@@ -259,3 +265,8 @@ class BaseController(object):
 
     def has_updates_param(self, method):
         return hasattr(method, "_updates_model") and hasattr(method, "_updates_model_arg")
+
+
+
+class EntityNotFoundException(Exception):
+    pass

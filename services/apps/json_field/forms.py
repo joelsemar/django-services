@@ -4,7 +4,7 @@ import json
 import datetime
 import decimal
 
-class JSONFormField(fields.Field):
+class JSONFormField(fields.CharField):
 
     def __init__(self, *args, **kwargs):
         self.simple = kwargs.pop('simple', False)
