@@ -58,6 +58,32 @@ class GeoCode():
         return lng, lat
 
 
+class PlacesClient():
+    BASE_URL = "https://maps.googleapis.com/maps/api/place"
+    AUTOCOMPLETE = "autocomplete"
+    SEARCH = "nearbysearch"
+
+    def __init__(self, api_key):
+        self.api_key = api_key
+
+    def call(self, url, **kwargs):
+        kwargs['key'] = self.api_key
+        return requests.get(url, kwargs).json()
+
+    def autocomplete(self, input, lat=None, lng=None, radius=50000):
+        location = "%s,%s" % (lat, lng)
+        url = self.url(self.AUTOCOMPLETE)
+        return self.call(url, location=location, input=input, radius=radius)
+
+    def search(self, input, lat=None, lng=None, radius=50000):
+        location = "%s,%s" % (lat, lng)
+        url = self.url(self.SEARCH)
+        return self.call(url, location=location, name=input, radius=radius)
+
+    def url(self, path):
+        return "{0}/{1}/json".format(self.BASE_URL, path)
+
+
 def friendly_url_encode(data):
     # makes sure that for every item in your data dictionary that is of unicode type, it is first UTF-8
     # encoded before passing it in to urllib.urlencode()
@@ -92,7 +118,7 @@ def generic_exception_handler(request, exception):
         error += frame_template % frame
 
     if exception.message:
-        error += exception.message
+        error += str(exception.message)
 
     error += '\n'
 
