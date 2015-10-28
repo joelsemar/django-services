@@ -6,8 +6,9 @@ from django.http import HttpResponse, HttpResponseNotAllowed, QueryDict
 from django.utils.importlib import import_module
 from django.db.models import Model as DjangoModel
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models.fields import DateTimeField, DateField
 
-from services.utils import generic_exception_handler, un_camel_dict, un_camel
+from services.utils import generic_exception_handler, un_camel_dict, un_camel, default_time_parse
 from services.view import BaseView
 from services.models import ModelDTO
 try:
@@ -167,30 +168,27 @@ class BaseController(object):
 
     def build_model_body_payload(self, request, mapped_method, body_param_class):
         body_param = body_param_class()
-        for field in body_param_class._meta.fields:
-            # in some cases these are not the same (eg ForeignKey fields)
-            # so the client can send us "related_model_name" and we will set the attribute "related_model_name_id"
-            field_attname = field.attname
-            field_name = field.name
-
-            if field.primary_key:
-                continue
-
-            if request.payload.get(field_name) != None:
-                setattr(body_param, field_attname, request.payload.get(field_name))
-
+        self.update_model_instance_with_payload(body_param, request.payload)
         return body_param
 
     def build_updates_param(self, request, method, kwargs):
         model_instance = self.get_model_instance(request, method, "_updates_model", "_updates_model_arg", kwargs)
+        self.update_model_instance_with_payload(model_instance, request.payload)
+        updates_model_arg = getattr(method, '_updates_model_arg')
+        kwargs[updates_model_arg] = model_instance
 
-        if model_instance and request.payload:
+    def update_model_instance_with_payload(self, model_instance, payload):
+        if model_instance and payload:
             for field in model_instance._meta.fields:
-                if request.payload.get(field.name) != None:
-                    setattr(model_instance, field.name, request.payload[field.name])
-
-            updates_model_arg = getattr(method, '_updates_model_arg')
-            kwargs[updates_model_arg] = model_instance
+                if field.primary_key:
+                    continue
+                field_attname = field.attname
+                field_name = field.name
+                val = payload.get(field_name, payload.get(field_attname))
+                if field.__class__ in (DateTimeField, DateField):
+                    val = default_time_parse(val)
+                if field.name in payload.keys():
+                    setattr(model_instance, field.name, val)
 
     def set_entity_param(self, request, method, kwargs):
         model_instance = self.get_model_instance(request, method, "_entity_model", "_entity_model_arg", kwargs)
@@ -265,7 +263,6 @@ class BaseController(object):
 
     def has_updates_param(self, method):
         return hasattr(method, "_updates_model") and hasattr(method, "_updates_model_arg")
-
 
 
 class EntityNotFoundException(Exception):
