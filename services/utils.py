@@ -62,6 +62,7 @@ class PlacesClient():
     BASE_URL = "https://maps.googleapis.com/maps/api/place"
     AUTOCOMPLETE = "autocomplete"
     SEARCH = "nearbysearch"
+    DETAILS = "details"
 
     def __init__(self, api_key):
         self.api_key = api_key
@@ -69,6 +70,10 @@ class PlacesClient():
     def call(self, url, **kwargs):
         kwargs['key'] = self.api_key
         return requests.get(url, kwargs).json()
+
+    def get_place(self, place_id):
+        url = self.url(self.DETAILS)
+        return self.call(url, placeid=place_id)
 
     def autocomplete(self, input, lat=None, lng=None, radius=50000):
         location = "%s,%s" % (lat, lng)
