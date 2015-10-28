@@ -188,7 +188,7 @@ class BaseController(object):
                 if field.__class__ in (DateTimeField, DateField):
                     val = default_time_parse(val)
                 if field.name in payload.keys():
-                    setattr(model_instance, field.name, val)
+                    setattr(model_instance, field.attname, val)
 
     def set_entity_param(self, request, method, kwargs):
         model_instance = self.get_model_instance(request, method, "_entity_model", "_entity_model_arg", kwargs)
