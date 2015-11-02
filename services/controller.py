@@ -158,7 +158,7 @@ class BaseController(object):
             for field in provided_fields:
                 if field in hidden_fields:
                     continue
-                if request.payload.get(field):
+                if field in request.payload.keys():
                     setattr(body_param, field, request.payload.get(field))
                 else:
                     # use the Class.prop value as default

@@ -8,6 +8,7 @@ import urllib
 import urllib2
 import xml.sax.handler
 import math
+from decimal import Decimal
 
 from django.db import transaction
 try:
@@ -434,7 +435,16 @@ def get_first(seq):
     return None
 
 
-class DateTimeAwareJSONEncoder(simplejson.JSONEncoder):
+class DefaultJSONEncoder(simplejson.JSONEncoder):
+
+    def default(self, o):
+        try:
+            return str(o)
+        except:
+            return super(DefaultJSONEncoder, self).default(o)
+
+
+class DateTimeAwareJSONEncoder(DefaultJSONEncoder):
 
     """
     JSONEncoder subclass that knows how to encode date/time types
