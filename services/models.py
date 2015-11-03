@@ -34,4 +34,4 @@ class ModelDTO(object):
         return m
 
     def get_model_class(self):
-        return self.__class__.__bases__[1]()
+        return self.__class__.__bases__[1]

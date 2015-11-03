@@ -55,6 +55,9 @@ class BaseController(object):
             if self.uses_entity(mapped_method):
                 self.set_entity_param(request, mapped_method, kwargs)
 
+            if self.uses_entities(mapped_method):
+                self.set_entities_param(request, mapped_method, kwargs)
+
             kwargs = self.set_query_params_to_kwargs(request, mapped_method, kwargs)
 
         except EntityNotFoundException as e:
@@ -182,13 +185,12 @@ class BaseController(object):
             for field in model_instance._meta.fields:
                 if field.primary_key:
                     continue
-                field_attname = field.attname
-                field_name = field.name
-                val = payload.get(field_name, payload.get(field_attname))
+                if field.attname not in payload.keys() and field.name not in payload.keys():
+                    continue
+                val = payload.get(field.name, payload.get(field.attname))
                 if field.__class__ in (DateTimeField, DateField):
                     val = default_time_parse(val)
-                if field.name in payload.keys():
-                    setattr(model_instance, field.attname, val)
+                setattr(model_instance, field.attname, val)
 
     def set_entity_param(self, request, method, kwargs):
         model_instance = self.get_model_instance(request, method, "_entity_model", "_entity_model_arg", kwargs)
@@ -196,13 +198,19 @@ class BaseController(object):
             entity_model_arg = getattr(method, '_entity_model_arg')
             kwargs[entity_model_arg] = model_instance
 
+    def set_entities_param(self, request, method, kwargs):
+        queryset = self.get_queryset(request, method, "_queryset_model", "_queryset_model_arg", kwargs)
+        if queryset:
+            entity_model_arg = getattr(method, '_queryset_model_arg')
+            kwargs[entity_model_arg] = queryset
+
     def get_model_instance(self, request, method, model_arg_type, arg_type, kwargs):
         if hasattr(method, model_arg_type):
             model_class = getattr(method, model_arg_type)
             bases = inspect.getmro(model_class)
             if ModelDTO in bases:
-                # Muhahahahah!!!
-                model_class = bases[bases.index(ModelDTO) + 1]
+                # get the *real* model class
+                model_class = model_class().get_model_class()
             model_arg = getattr(method, arg_type)
             try:
                 if kwargs.get(model_arg):
@@ -211,6 +219,25 @@ class BaseController(object):
                     return model_class.objects.get(user=request.user)
             except ObjectDoesNotExist:
                 raise EntityNotFoundException(model_arg + " not found.")
+
+    def get_queryset(self, request, method, model_arg_type, arg_type, kwargs):
+        if hasattr(method, model_arg_type):
+            model_class = getattr(method, model_arg_type)
+            bases = inspect.getmro(model_class)
+            if ModelDTO in bases:
+                # get the *real* model class
+                model_class = model_class().get_model_class()
+            model_arg = getattr(method, arg_type)
+            if kwargs.get(model_arg):
+                return model_class.objects.filter(id=kwargs[model_arg])
+            else:
+                return model_class.objects.filter(user=request.user)
+
+    def get_django_model_from_mro(self, dto_class):
+        bases = inspect.getmro(dto_class)
+        for cls in bases:
+            if isinstance(cls, DjangoModel):
+                return cls
 
     def fix_delete_and_put(self, request):
         if request.method == "put":
@@ -260,6 +287,9 @@ class BaseController(object):
 
     def uses_entity(self, method):
         return hasattr(method, "_entity_model") and hasattr(method, "_entity_model_arg")
+
+    def uses_entities(self, method):
+        return hasattr(method, "_queryset_model") and hasattr(method, "_queryset_model_arg")
 
     def has_updates_param(self, method):
         return hasattr(method, "_updates_model") and hasattr(method, "_updates_model_arg")

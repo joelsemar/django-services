@@ -27,6 +27,10 @@ def render_with(view):
     return tag_function('_view', view)
 
 
+def model_dto(cls):
+    return tag_function('_model', cls)
+
+
 # deprecating this guy in favor of  white list, keep it around so as not to cause too much trouble
 @_decorator
 def login_required(decorated_function):
@@ -65,6 +69,9 @@ def body(model_class, arg='body'):
 
 def entity(model_class, arg='entity'):
     return multitag_function(['_entity_model', '_entity_model_arg'], [model_class, arg])
+
+def entities(model_class, arg='queryset'):
+    return multitag_function(['_queryset_model', '_queryset_model_arg'], [model_class, arg])
 
 
 def updates(model_class, arg=''):

@@ -435,6 +435,13 @@ def get_first(seq):
     return None
 
 
+def if_one(seq):
+    if seq and len(seq) == 1:
+        return seq[0]
+
+    return seq
+
+
 class DefaultJSONEncoder(simplejson.JSONEncoder):
 
     def default(self, o):
