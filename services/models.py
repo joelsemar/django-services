@@ -27,7 +27,7 @@ class BaseModel(models.Model):
 class ModelDTO(object):
 
     def save(self, *args, **kwargs):
-        m = self.get_model_class()
+        m = self.get_model_class()()
         for field in m._meta.fields:
             setattr(m, field.name, getattr(self, field.name, None))
         m.save(*args, **kwargs)
