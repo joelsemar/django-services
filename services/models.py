@@ -35,3 +35,6 @@ class ModelDTO(object):
 
     def get_model_class(self):
         return self.__class__.__bases__[1]
+
+    class Meta:
+        abstract = True
