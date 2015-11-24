@@ -279,7 +279,7 @@ class BaseController(object):
 
     def auth_check(self, request, method):
         if not hasattr(method, '_unauthenticated') and not request.user.is_authenticated():
-            response = self.view()
+            response = self.view(request)
             return response.add_errors('401 -- Unauthorized', status=401).serialize()
 
     def has_body_param(self, method):
