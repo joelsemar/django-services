@@ -107,7 +107,7 @@ class BaseController(object):
         elif content_type == "application/x-www-form-urlencoded":
             request.payload = dict(getattr(request, request.method.upper, {}))
 
-        if getattr(request, 'camel_case', False):
+        if getattr(request, 'camel_case', False) and request.payload:
             request.payload = un_camel_dict(request.payload)
 
     def get_view(self, request, mapped_method):
