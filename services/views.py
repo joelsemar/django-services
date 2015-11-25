@@ -127,6 +127,22 @@ class BaseView(object):
 
         return self._data
 
+    @property
+    def pretty_print(self):
+        if settings.DEBUG:
+            return True
+
+        if hasattr(self, '_request'):
+            return self._request.REQUEST.get('pretty_print', False)
+
+        return False
+
+    @property
+    def camel_case(self):
+        if hasattr(self, '_request'):
+            return getattr(self._request, 'camel_case', False)
+        return False
+
     def serialize(self, messages=None, errors=None, status=None):
         from services.utils import DateTimeAwareJSONEncoder
 
@@ -151,10 +167,10 @@ class BaseView(object):
             else:
                 response_dict = self._render(self._request)
 
-        if getattr(self._request, 'camel_case', False):
+        if self.camel_case:
             response_dict = camel_dict(response_dict)
 
-        if settings.DEBUG or self._request.REQUEST.get('pretty_print'):
+        if self.pretty_print:
             response_body = simplejson.dumps(response_dict, cls=DateTimeAwareJSONEncoder, indent=JSON_INDENT)
         else:
             response_body = simplejson.dumps(response_dict, cls=DateTimeAwareJSONEncoder)

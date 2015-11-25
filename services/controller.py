@@ -61,7 +61,7 @@ class BaseController(object):
             kwargs = self.set_query_params_to_kwargs(request, mapped_method, kwargs)
 
         except EntityNotFoundException as e:
-            return self.view().not_found(str(e)).serialize()
+            return self.view(request).not_found(str(e)).serialize()
 
         view = self.get_view(request, mapped_method)
         if view:
@@ -97,6 +97,7 @@ class BaseController(object):
         return generic_exception_handler(request, e)
 
     def build_payload(self, request):
+        request.payload = {}
         content_type = request.META.get("CONTENT_TYPE", "application/json")
         if content_type == 'application/json':
             try:
