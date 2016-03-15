@@ -3,7 +3,7 @@ from services.decorators import login_required, render_with
 from services.view import ModelView
 
 from django.db import transaction
-from django.utils.importlib import import_module
+from importlib import import_module
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.conf import settings

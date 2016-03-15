@@ -1,9 +1,9 @@
 import logging
 import json
 import inspect
+from importlib import import_module
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseNotAllowed, QueryDict
-from django.utils.importlib import import_module
 from django.db.models import Model as DjangoModel
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.fields import DateTimeField, DateField
