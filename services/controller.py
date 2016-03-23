@@ -30,11 +30,15 @@ class BaseController(object):
 
     def __call__(self, request, *args, **kwargs):
 
-        request.camel_case = request.META.get("X-SERVICES-CAMEL") != None or request.GET.get("_camel")
+        request.camel_case = request.META.get("X-SERVICES-CAMEL") is not None or request.GET.get("_camel")
         self.fix_delete_and_put(request)
         self.build_payload(request)
 
-        mapped_method = self.get_mapped_method(request)
+        try:
+            mapped_method = self.get_mapped_method(request)
+        except NotAllowedException:
+            return HttpResponseNotAllowed()
+
         if not mapped_method:
             return HttpResponse("Not Found", status=404)
 
@@ -257,7 +261,7 @@ class BaseController(object):
         method_name = self.callmap.get(request_method, request.method)
 
         if not hasattr(self, method_name):
-            return HttpResponseNotAllowed([method for method in self.callmap.keys() if hasattr(self, method)])
+            NotAllowedException()
 
         return getattr(self, method_name, None)
 
@@ -297,4 +301,8 @@ class BaseController(object):
 
 
 class EntityNotFoundException(Exception):
+    pass
+
+
+class NotAllowedException(Exception):
     pass
