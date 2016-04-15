@@ -46,7 +46,6 @@ def unauthenticated(decorated_function):
 def superuser_only(decorated_function):
     decorated_function.login_required = True  # for documentation purposes
 
-    @wraps(decorated_function)
     def new_function(*args, **kwargs):
         try:
             request = [a for a in args if hasattr(a, 'user')][0]

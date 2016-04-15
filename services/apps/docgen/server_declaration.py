@@ -122,30 +122,42 @@ class ServerDeclaration():
         hidden_fields = getattr(body_param_class, '_hides', [])
 
         if DjangoModel in inspect.getmro(body_param_class):
-            for field in body_param_class._meta.fields:
-                field_name = field.name
-                if field.primary_key:
-                    continue
+            ret.update(self.create_model_payload(body_param_class))
 
-                if field_name in [f.name for f in BaseModel._meta.fields]:
-                    continue
+        elif hasattr(body_param_class, '_model'):
+            ret.update(self.create_model_payload(getattr(body_param_class, '_model')))
 
-                if field_name in hidden_fields:
-                    continue
+        for prop in dir(body_param_class):
+            if not prop.startswith("_") and prop not in hidden_fields and not ret.get(prop):
+                ret[prop] = getattr(body_param_class, prop)
 
-                default = field.default
-                if default == DEFAULT_NOT_PROVIDED or default == '':
-                    ret[field_name] = ""
-
-                elif not hasattr(field.default, '__call__'):
-                    ret[field_name] = field.default
-
-        else:
-            for prop in dir(body_param_class):
-                if not prop.startswith("_") and prop not in hidden_fields:
-                    ret[prop] = getattr(body_param_class, prop)
-
+        for f in hidden_fields:
+            if ret.get(f):
+                del ret[f]
         return json.dumps(ret, indent=4)
+
+    def create_model_payload(self, django_model):
+        ret = {}
+        hidden_fields = getattr(django_model, '_hides', [])
+        for field in django_model._meta.fields:
+            field_name = field.name
+            if field.primary_key:
+                continue
+
+            if field_name in [f.name for f in BaseModel._meta.fields]:
+                continue
+
+            if field_name in hidden_fields:
+                continue
+
+            default = field.default
+            if default == DEFAULT_NOT_PROVIDED or default == '':
+                ret[field_name] = ""
+
+            elif not hasattr(field.default, '__call__'):
+                ret[field_name] = field.default
+
+        return ret
 
     def crawl_urls(self):
         ret = []

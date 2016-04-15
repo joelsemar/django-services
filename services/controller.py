@@ -1,3 +1,4 @@
+
 import logging
 import json
 import inspect
@@ -143,28 +144,33 @@ class BaseController(object):
 
     def build_body_param(self, request, mapped_method):
         body_param_class = getattr(mapped_method, '_body_param_class', None)
-        hidden_fields = getattr(body_param_class, '_hides', [])
+        ignored_fields = getattr(body_param_class, '_ignores', [])
         if not body_param_class:
             return None
 
         if not request.payload:
             return None
 
-        if DjangoModel in inspect.getmro(body_param_class):
-            return self.build_model_body_payload(request, mapped_method, body_param_class)
+        if hasattr(body_param_class, '_model'):
+            body_param = self.build_model_body_payload(request, mapped_method, getattr(body_param_class, '_model'))
 
-        body_param = body_param_class()
-        provided_fields = [f for f in dir(body_param) if not f.startswith("_")]
+        else:
+            body_param = body_param_class()
+
+        provided_fields = [f for f in dir(body_param_class()) if not f.startswith("_")]
 
         # just using a basic Payload object, no properties defined
         if not provided_fields:
             for key, value in request.payload.items():
+                if key in ignored_fields or getattr(body_param, key, None) is not None:
+                    continue
                 setattr(body_param, key, value)
 
         # here our payload class has properties defined, we just grab those
         else:
             for field in provided_fields:
-                if field in hidden_fields:
+                # if the field should be ignored, or if it has already been set somehow
+                if field in ignored_fields or getattr(body_param, field, None) is not None:
                     continue
                 if field in request.payload.keys():
                     setattr(body_param, field, request.payload.get(field))
@@ -212,10 +218,10 @@ class BaseController(object):
     def get_model_instance(self, request, method, model_arg_type, arg_type, kwargs):
         if hasattr(method, model_arg_type):
             model_class = getattr(method, model_arg_type)
-            bases = inspect.getmro(model_class)
-            if ModelDTO in bases:
-                # get the *real* model class
-                model_class = model_class().get_model_class()
+
+            if hasattr(model_class, '_model'):
+                model_class = getattr(model_class, '_model')
+
             model_arg = getattr(method, arg_type)
             try:
                 if kwargs.get(model_arg):
@@ -228,10 +234,8 @@ class BaseController(object):
     def get_queryset(self, request, method, model_arg_type, arg_type, kwargs):
         if hasattr(method, model_arg_type):
             model_class = getattr(method, model_arg_type)
-            bases = inspect.getmro(model_class)
-            if ModelDTO in bases:
-                # get the *real* model class
-                model_class = model_class().get_model_class()
+            if hasattr(model_class, '_model'):
+                model_class = getattr(model_class, '_model')
             model_arg = getattr(method, arg_type)
             if kwargs.get(model_arg):
                 return model_class.objects.filter(id=kwargs[model_arg])
