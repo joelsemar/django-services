@@ -42,10 +42,10 @@ def unauthenticated(decorated_function):
     return decorated_function
 
 
-@_decorator
 def superuser_only(decorated_function):
     decorated_function.login_required = True  # for documentation purposes
 
+    @wraps(decorated_function)
     def new_function(*args, **kwargs):
         try:
             request = [a for a in args if hasattr(a, 'user')][0]
@@ -68,6 +68,7 @@ def body(model_class, arg='body'):
 
 def entity(model_class, arg='entity'):
     return multitag_function(['_entity_model', '_entity_model_arg'], [model_class, arg])
+
 
 def entities(model_class, arg='queryset'):
     return multitag_function(['_queryset_model', '_queryset_model_arg'], [model_class, arg])

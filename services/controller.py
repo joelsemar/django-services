@@ -110,11 +110,12 @@ class BaseController(object):
             except Exception as e:
                 raise Exception('Invalid JSON data ' + e.message)
 
-        elif content_type == "application/x-www-form-urlencoded":
-            request.payload = dict(getattr(request, request.method.upper, {}))
+        elif "form-urlencoded" in content_type:
+            request.payload = dict(getattr(request, request.method.upper(), {}))
 
         if getattr(request, 'camel_case', False) and getattr(request, 'payload', False):
             request.payload = un_camel_dict(request.payload)
+
 
     def get_view(self, request, mapped_method):
         # decorators attach the View class to the method itself as '_view', first look there
@@ -170,7 +171,7 @@ class BaseController(object):
         else:
             for field in provided_fields:
                 # if the field should be ignored, or if it has already been set somehow
-                if field in ignored_fields or getattr(body_param, field, None) is not None:
+                if field in ignored_fields or getattr(body_param, field, None) is not getattr(body_param_class(), field, None):
                     continue
                 if field in request.payload.keys():
                     setattr(body_param, field, request.payload.get(field))

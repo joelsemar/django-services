@@ -112,6 +112,9 @@ class BaseView(object):
     def not_found(self, message="Not Found"):
         return self.add_errors(message, status=404)
 
+    def forbidden(self, message="Forbidden"):
+        return self.add_errors(message, status=403)
+
     def created(self):
         return self.set_status(201)
 
