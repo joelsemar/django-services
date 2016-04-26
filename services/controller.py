@@ -102,6 +102,10 @@ class BaseController(object):
         return generic_exception_handler(request, e)
 
     def build_payload(self, request):
+        if request.method == "PUT":
+            request.PUT = QueryDict(request.body)
+            request.POST = QueryDict({})
+        
         request.payload = {}
         content_type = request.META.get("CONTENT_TYPE", "application/json")
         if content_type == 'application/json':
