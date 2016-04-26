@@ -211,8 +211,6 @@ class ModelView(BaseView):
     def render(self, request):
 
         ret = {}
-        if not self.instance:
-            return self._data
 
         if self.fields:
             for field in self.fields:
@@ -272,11 +270,11 @@ class QuerySetView(BaseView):
         ret = [self.model_view.render_instance(obj, request) for obj in queryset]
         ret = self.sort(ret, request)
 
-        return {self.queryset_label: ret}
+        return ret
 
     def render_paged(self, request, queryset):
         results, paging_dict = self.auto_page(
-            queryset, page_number=request.GET.get('page_number', 0), limit=request.GET.get('limit', 20))
+            queryset, page_number=request.GET.get('page_number', 1), limit=request.GET.get('limit', 20))
 
         ret = [self.model_view.render_instance(obj, request) for obj in results]
         ret = self.sort(ret, request)

@@ -116,7 +116,6 @@ class BaseController(object):
         if getattr(request, 'camel_case', False) and getattr(request, 'payload', False):
             request.payload = un_camel_dict(request.payload)
 
-
     def get_view(self, request, mapped_method):
         # decorators attach the View class to the method itself as '_view', first look there
         method_view = getattr(mapped_method, '_view', None)
@@ -134,7 +133,7 @@ class BaseController(object):
 
         # the user has given us an instantiated instance @render_with(QuerySetView(model_view=MyModelView))
         # we have to reset it and attach the request object to it
-        elif isinstance(method_view, self.view):
+        elif isinstance(method_view, BaseView):
             view = method_view
             view.reset(request)
 
