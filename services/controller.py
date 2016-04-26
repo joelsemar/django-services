@@ -102,10 +102,6 @@ class BaseController(object):
         return generic_exception_handler(request, e)
 
     def build_payload(self, request):
-        if request.method == "PUT":
-            request.PUT = QueryDict(request.body)
-            request.POST = QueryDict({})
-        
         request.payload = {}
         content_type = request.META.get("CONTENT_TYPE", "application/json")
         if content_type == 'application/json':
@@ -253,13 +249,13 @@ class BaseController(object):
                 return cls
 
     def fix_delete_and_put(self, request):
-        if request.method == "put":
-            request.PUT = QueryDict(request.raw_post_data)
+        if request.method == "PUT":
+            request.PUT = QueryDict(request.body)
             request.request_id = request.PUT.get('request_id')
             request.POST = QueryDict({})
 
-        if request.method == "delete":
-            request.DELETE = QueryDict(request.raw_post_data)
+        if request.method == "DELETE":
+            request.DELETE = QueryDict(request.body)
             if not request.DELETE.keys():
                 request.DELETE = QueryDict(request.META['QUERY_STRING'])
                 request.POST = QueryDict({})
