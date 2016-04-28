@@ -270,7 +270,8 @@ class QuerySetView(BaseView):
         ret = [self.model_view.render_instance(obj, request) for obj in queryset]
         ret = self.sort(ret, request)
 
-        return ret
+        return {self.queryset_label: ret}
+
 
     def render_paged(self, request, queryset):
         results, paging_dict = self.auto_page(
