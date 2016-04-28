@@ -250,7 +250,7 @@ class QuerySetView(BaseView):
     queryset_label = 'results'
 
     def should_render(self, request):
-        return self.queryset
+        return self.queryset is not None
 
     def __init__(self, request=None, model_view=None, paging=False):
         self.model_view = model_view or self.model_view
