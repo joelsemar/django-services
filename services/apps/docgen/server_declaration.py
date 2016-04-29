@@ -58,10 +58,6 @@ class ServerDeclaration():
                 method_dict['body_param_class'] = getattr(method, '_body_param_class').__name__
                 method_dict['test_payload'] = self.create_test_payload(getattr(method, '_body_param_class'))
 
-            if hasattr(method, '_updates_model'):
-                method_dict['body_param_class'] = getattr(method, '_updates_model').__name__
-                method_dict['test_payload'] = self.create_test_payload(getattr(method, '_updates_model'))
-
             if hasattr(method, '_view'):
                 view = getattr(method, '_view')
 
@@ -132,7 +128,7 @@ class ServerDeclaration():
                 ret[prop] = getattr(body_param_class, prop)
 
         for f in hidden_fields:
-            if ret.get(f):
+            if ret.get(f) is not None:
                 del ret[f]
         return json.dumps(ret, indent=4)
 

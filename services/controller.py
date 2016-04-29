@@ -20,13 +20,14 @@ except:
 
 class BaseController(object):
     view = BaseView
+
     callmap = {
         'GET': 'read',
         'POST': 'create',
         'PUT': 'update',
         'DELETE': 'delete'
     }
-
+    
     request_logger = logging.getLogger('default')
 
     def __call__(self, request, *args, **kwargs):
@@ -89,6 +90,7 @@ class BaseController(object):
 
         response = self.run_response_middleware(request, response)
         return response.serialize()
+
 
     def run_response_middleware(self, request, response):
         for mstring in getattr(settings, 'SERVICES_MIDDLEWARE_CLASSES', []):
