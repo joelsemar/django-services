@@ -209,6 +209,8 @@ def flatten(items):
 
 
 def str_to_bool(str):
+    if str is None:
+        return False
     return str.lower() in ['1', 'true', 't', 'y', 'yes']
 
 

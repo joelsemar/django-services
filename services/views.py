@@ -272,7 +272,6 @@ class QuerySetView(BaseView):
 
         return {self.queryset_label: ret}
 
-
     def render_paged(self, request, queryset):
         results, paging_dict = self.auto_page(
             queryset, page_number=request.GET.get('page_number', 1), limit=request.GET.get('limit', 20))
