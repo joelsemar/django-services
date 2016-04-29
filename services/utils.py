@@ -112,9 +112,7 @@ def generic_exception_handler(request, exception):
     from services.view import BaseView
     response = BaseView(request=request)
     _, _, tb = sys.exc_info()
-    # we just want the last frame, (the one the exception was thrown from)
     import traceback
-    import socket
     frames = traceback.extract_tb(tb)
     frame_template = "File %s, line %s, in %s\n  %s\n"
     error_header = '----%s----\n' % datetime.datetime.utcnow()
@@ -123,23 +121,14 @@ def generic_exception_handler(request, exception):
     for frame in frames:
         error += frame_template % frame
 
-    if exception.message:
+    if len(str(exception.message)) < 2000:
         error += str(exception.message)
 
     error += '\n'
 
     response.add_errors(error)
     logger = logging.getLogger('default')
-    mail_logger = logging.getLogger('exception_email')
     logger.error(error_header + error)
-    mail_logger.error('Internal Server Error: %s on %s', request.path, socket.gethostname(),
-                      exc_info=tb,
-                      extra={
-        'status_code': 500,
-        'request': request
-    }
-    )
-
     transaction.rollback()
 
     return response.serialize()
