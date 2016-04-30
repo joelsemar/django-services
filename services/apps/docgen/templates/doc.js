@@ -101,16 +101,16 @@ function create_test(handler, method){
     var url = $(formId + "_url").val();
     var data;
     var headers = {};
-    var json_body = get_json_body(form);
-    if(json_body){
-        data = json_body;
+    var json_field = get_json_body(form);
+    if(json_field){
+        data = json_field.val()
         headers['Content-Type'] = "application/json";
-        if (!check_json(formId, data)){
+        if (!check_json(formId, data, json_field)){
             return false;
         }
     }
 
-    if(is_file_upload){
+    if(is_file_upload(form)){
         data = new FormData();
         for (var i=0;i<form.length;i++){
             if(form[i].type === "file"){
@@ -146,11 +146,11 @@ function create_test(handler, method){
     })
 }
 
-function check_json(formId, data){
+function check_json(formId, data, form_field){
     var errorDiv = $(formId + "_form .jsonlintError");
     try {
        var result = jsonlint.parse(data);
-       $elem.val(JSON.stringify(result, null, "  "))
+       form_field.val(JSON.stringify(result, null, "  "))
        errorDiv.hide();
        return true;
     } catch (e){
@@ -178,7 +178,7 @@ function success_func(handler, method){
 function get_json_body(form){
     for (var i=0;i<form.length;i++){
         if(form[i].name === "body"){
-            return $(form[i]).val();
+            return $(form[i]);
         }
     }
     return null;
