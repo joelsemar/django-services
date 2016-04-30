@@ -43,7 +43,17 @@
                 <div class="jsonlintError"> Error spot</div>
             {% endif %}
             {% for param in method.params %}
-               <input type='text'class="form-control" name="{{param.name}}" placeholder="{{param.name}}" size=30></input><br/>
+               {% if param.type == 'file' %}
+               <div class="fileinput fileinput-new" data-provides="fileinput">
+                   <span class="btn btn-default btn-file">
+                         <span>Choose {{param.name}}</span>
+                         <input type='file' class="form-control"  name="{{param.name}}" size=30 />
+                  </span>
+                  <span class="fileinput-filename"></span><span class="fileinput-new">No file chosen</span>
+               </div><br/>
+               {% else %}
+               <input type='text' class="form-control" name="{{param.name}}" placeholder="{{param.name}}" size=30></input><br/>
+               {%endif %}
             {% endfor %}
             <button type="button" onclick="create_test('{{handler.name}}','{{method.request_method}}')">Send</button>
 

@@ -1,3 +1,4 @@
+
 $(function(){
     if (window.location.hash) {
         hash = window.location.hash;
@@ -96,28 +97,43 @@ function get_random_letter(){
 
 function create_test(handler, method){
     var formId = "#" + handler + method;
-    var form = $(formId+ "_form :input[value]")
+    var form = $(formId+ "_form :input")
     var url = $(formId + "_url").val();
     var data;
     var headers = {};
-    for (var i=0;i<form.length;i++){
-        if(form[i].name === "body"){
-            $elem = $(form[i])
-            data = $elem.val();
-            var errorDiv = $(formId + "_form .jsonlintError");
-            try{
-               var result = jsonlint.parse(data);
-               $elem.val(JSON.stringify(result, null, "  "))
-               errorDiv.hide();
-            }catch (e){
-                errorDiv.show()
-                errorDiv.html(e.message)
-                return;
-            }
-
-            headers['Content-Type'] = "application/json";
+    var json_body = get_json_body(form);
+    if(json_body){
+        data = json_body;
+        headers['Content-Type'] = "application/json";
+        if (!jsonlint(formId)){
+            return false;
         }
     }
+
+    if(is_file_upload){
+        data = new FormData();
+        for (var i=0;i<form.length;i++){
+            if(form[i].type === "file"){
+                data.append(form[i].name , form[i].files[0])
+            }
+            else{
+                data.append(form[i].name, form[i].value)
+            }
+        }
+        $.ajax({
+            url: url,
+            data: data,
+            type: method,
+            headers: headers,
+            contentType: false,
+            processData: false,
+            complete: success_func(handler, method)
+        })
+
+        return;
+
+    }
+
     if (!data){
         data = form.serialize();
     }
@@ -127,24 +143,56 @@ function create_test(handler, method){
         data: data,
         type: method,
         headers: headers,
-        complete: function(response){
-            var result_div = '#' + handler + method + "_response_div";
-            var close_control_id = handler + method + "_X";
-            if (response.getResponseHeader('content-type').indexOf('xml') != -1) {
-                var data = formatXML(response.responseText);
-            }
-            else {
-                var data = response.responseText;
-            }
-            var html = "<span class='closing_x' id='" + close_control_id + "';'>Hide X</span>";
-            html += "Result: <br /><pre>" + data + "</pre>";
-            $(result_div).show();
-            $(result_div).html(html);
-            $("#" + close_control_id).click(function(){
-                $(result_div).toggle();
-            })
-        }
+        complete: success_func(handler, method)
     })
+}
+
+function jsonlint(formId){
+    var errorDiv = $(formId + "_form .jsonlintError");
+    try {
+       var result = jsonlint.parse(data);
+       $elem.val(JSON.stringify(result, null, "  "))
+       errorDiv.hide();
+       return true;
+    } catch (e){
+        errorDiv.show()
+        errorDiv.html(e.message)
+        return false
+    }
+
+}
+function success_func(handler, method){
+    return function(response){
+        var result_div = '#' + handler + method + "_response_div";
+        var close_control_id = handler + method + "_X";
+        var data = response.responseText;
+        var html = "<span class='closing_x' id='" + close_control_id + "';'>Hide X</span>";
+            html += "Result: <br /><pre>" + data + "</pre>";
+        $(result_div).show();
+        $(result_div).html(html);
+        $("#" + close_control_id).click(function(){
+            $(result_div).toggle();
+        })
+    }
+
+}
+function get_json_body(form){
+    for (var i=0;i<form.length;i++){
+        if(form[i].name === "body"){
+            return $(form[i]).val();
+        }
+    }
+    return null;
+
+}
+function is_file_upload(form){
+    for (var i=0;i<form.length;i++){
+        if(form[i].type === "file"){
+            return true;
+        }
+    }
+    return false;
+
 }
 
 function load_handler(div_id){
