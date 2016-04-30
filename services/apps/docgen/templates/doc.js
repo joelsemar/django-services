@@ -105,7 +105,7 @@ function create_test(handler, method){
     if(json_body){
         data = json_body;
         headers['Content-Type'] = "application/json";
-        if (!jsonlint(formId)){
+        if (!check_json(formId)){
             return false;
         }
     }
@@ -147,7 +147,7 @@ function create_test(handler, method){
     })
 }
 
-function jsonlint(formId){
+function check_json(formId){
     var errorDiv = $(formId + "_form .jsonlintError");
     try {
        var result = jsonlint.parse(data);
