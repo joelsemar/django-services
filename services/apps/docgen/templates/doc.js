@@ -105,7 +105,7 @@ function create_test(handler, method){
     if(json_body){
         data = json_body;
         headers['Content-Type'] = "application/json";
-        if (!check_json(formId)){
+        if (!check_json(formId, data)){
             return false;
         }
     }
@@ -117,8 +117,7 @@ function create_test(handler, method){
                 data.append(form[i].name , form[i].files[0])
             }
             else{
-                data.append(form[i].name, form[i].value)
-            }
+                data.append(form[i].name, form[i].value) }
         }
         $.ajax({
             url: url,
@@ -147,7 +146,7 @@ function create_test(handler, method){
     })
 }
 
-function check_json(formId){
+function check_json(formId, data){
     var errorDiv = $(formId + "_form .jsonlintError");
     try {
        var result = jsonlint.parse(data);
