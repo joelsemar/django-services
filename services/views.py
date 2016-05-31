@@ -73,15 +73,6 @@ class BaseView(object):
         self._data.update(kwargs)
         return self
 
-    def __setattr__(self, key, value):
-        if not hasattr(self, key):
-            self._data[key] = value
-        else:
-            super(BaseView, self).__setattr__(key, value)
-
-    def __getattr__(self, key):
-        return self.data.get(key)
-
     def set_status(self, status):
         assert isinstance(status, int)
         self._status = status
