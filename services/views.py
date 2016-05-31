@@ -29,7 +29,7 @@ class BaseView(object):
         _set('_errors', [])
         _set('_request', request)
         _set('success', True)
-        _set('_data',  {})
+        _set('_data', {})
         _set('_status', 200)
         _set('headers', {})
 
@@ -123,11 +123,12 @@ class BaseView(object):
 
     @property
     def pretty_print(self):
+        if hasattr(self, '_request'):
+            if self._request.GET.get('pretty_print'):
+                return True
+
         if settings.DEBUG:
             return True
-
-        if hasattr(self, '_request'):
-            return self._request.REQUEST.get('pretty_print', False)
 
         return False
 
@@ -262,7 +263,6 @@ class QuerySetView(BaseView):
         ret = self.sort(ret, request)
 
         return {self.queryset_label: ret}
-
 
     def render_paged(self, request, queryset):
         results, paging_dict = self.auto_page(
