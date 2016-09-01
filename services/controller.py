@@ -292,7 +292,8 @@ class BaseController(object):
         # method signature has a **kwargs type argument, give them everything
         if argsppec.keywords:
             for key in request.GET.keys():
-                keyword_args[un_camel(key)] = request.GET.get(key)
+                if key not in ["page_number", "limit"]:
+                    keyword_args[un_camel(key)] = request.GET.get(key)
 
         # just provide the specifically designated keyword args
         else:

@@ -58,8 +58,9 @@ class ServerDeclaration():
                 method_dict['body_param_class'] = getattr(method, '_body_param_class').__name__
                 method_dict['test_payload'] = self.create_test_payload(getattr(method, '_body_param_class'))
 
-            if hasattr(method, '_view'):
-                view = getattr(method, '_view')
+
+            view = getattr(method, '_view', getattr(handler, 'view', None))
+            if view:
 
                 if hasattr(view, 'auto_page') and getattr(view, 'paging', False):
                     method_dict['params'].append({'name': 'page_number', 'type': 'int', 'comment': "Page number"})
