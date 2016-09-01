@@ -127,10 +127,7 @@ class BaseView(object):
             if self._request.GET.get('pretty_print'):
                 return True
 
-        if settings.DEBUG:
-            return True
-
-        return False
+        return settings.DEBUG
 
     @property
     def camel_case(self):
@@ -274,11 +271,11 @@ class QuerySetView(BaseView):
         return {self.queryset_label: ret, 'paging': paging_dict}
 
     @classmethod
-    def inline_render(cls, queryset, request):
+    def inline_render(cls, queryset, request, model_view=None):
         """
         A Helper method to render a queryset inline manually
         """
-        view = cls()
+        view = cls(model_view=model_view)
         view.set(queryset=queryset)
         return view.render(request)['results']
 
@@ -287,7 +284,7 @@ class QuerySetView(BaseView):
 
     def auto_page(self, results, page_number=1, limit=10):
 
-        total_count = len(results)
+        total_count = results.count()
         try:
             page_number = int(page_number)
             limit = int(limit)

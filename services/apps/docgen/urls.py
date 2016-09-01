@@ -1,12 +1,12 @@
-#django
-from django.conf.urls import patterns, include, url
+# django
+from django.conf.urls import url
 from django.contrib import admin
-#services
+# services
 
-#app
+# app
 from services.apps.docgen.controllers import DocController
 admin.autodiscover()
 
-urlpatterns = patterns('',
+urlpatterns = [
     url(r'', DocController()),
-)
+]

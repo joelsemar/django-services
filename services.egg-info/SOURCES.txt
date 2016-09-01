@@ -1,5 +1,6 @@
 MANIFEST.in
 services/__init__.py
+services/admin.py
 services/apns.py
 services/auth_backends.py
 services/controller.py
@@ -12,6 +13,7 @@ services/gcm.py
 services/models.py
 services/oauth.py
 services/oauth2.py
+services/payload.py
 services/utils.py
 services/view.py
 services/views.py
@@ -21,6 +23,9 @@ services.egg-info/dependency_links.txt
 services.egg-info/not-zip-safe
 services.egg-info/top_level.txt
 services/apps/__init__.py
+services/apps/alive/__init__.py
+services/apps/alive/controllers.py
+services/apps/alive/urls.py
 services/apps/credential_storage/__init__.py
 services/apps/credential_storage/admin.py
 services/apps/credential_storage/models.py
@@ -35,7 +40,6 @@ services/apps/docgen/templates/doc.css
 services/apps/docgen/templates/doc.js
 services/apps/docgen/templates/doc_css.html
 services/apps/docgen/templates/handler_doc.html
-services/apps/docgen/templates/other_info_divs.html
 services/apps/json_field/__init__.py
 services/apps/json_field/fields.py
 services/apps/json_field/forms.py
@@ -62,11 +66,12 @@ services/data/__init__.py
 services/data/data_tests.py
 services/data/dataview.py
 services/data/fields.py
+services/lib/__init__.py
+services/lib/decorator.py
 services/management/__init__.py
 services/management/commands/__init__.py
 services/management/commands/build.py
 services/management/commands/builddocs.py
 services/management/commands/createdb.py
 services/management/commands/remote_update.py
-services/management/commands/shell.py
 services/templates/apiconsole.html

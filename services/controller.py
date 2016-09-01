@@ -27,12 +27,13 @@ class BaseController(object):
         'PUT': 'update',
         'DELETE': 'delete'
     }
-    
+
     request_logger = logging.getLogger('default')
 
     def __call__(self, request, *args, **kwargs):
 
-        request.camel_case = request.META.get("X-SERVICES-CAMEL") is not None or request.GET.get("_camel")
+        request.camel_case = request.META.get(
+            "X-SERVICES-CAMEL") is not None or request.GET.get("_camel")
         self.fix_delete_and_put(request)
         self.build_payload(request)
 
@@ -64,7 +65,8 @@ class BaseController(object):
             if self.uses_entities(mapped_method):
                 self.set_entities_param(request, mapped_method, kwargs)
 
-            kwargs = self.set_query_params_to_kwargs(request, mapped_method, kwargs)
+            kwargs = self.set_query_params_to_kwargs(
+                request, mapped_method, kwargs)
 
         except EntityNotFoundException as e:
             return self.view(request).not_found(str(e)).serialize()
@@ -84,13 +86,13 @@ class BaseController(object):
         # Allow mapped_method to respond with a view and override ours
         response = response or view
 
-        # user has replaced baseview with something else (likely HttpResponse or HttpResponseRedirect), we are done
+        # user has replaced baseview with something else (likely HttpResponse
+        # or HttpResponseRedirect), we are done
         if not isinstance(response, BaseView):
             return response
 
         response = self.run_response_middleware(request, response)
         return response.serialize()
-
 
     def run_response_middleware(self, request, response):
         for mstring in getattr(settings, 'SERVICES_MIDDLEWARE_CLASSES', []):
@@ -113,13 +115,15 @@ class BaseController(object):
                 raise Exception('Invalid JSON data ' + e.message)
 
         elif "form-urlencoded" in content_type:
-            request.payload = getattr(request, request.method.upper(), {}).dict()
+            request.payload = getattr(
+                request, request.method.upper(), {}).dict()
 
         if getattr(request, 'camel_case', False) and getattr(request, 'payload', False):
             request.payload = un_camel_dict(request.payload)
 
     def get_view(self, request, mapped_method):
-        # decorators attach the View class to the method itself as '_view', first look there
+        # decorators attach the View class to the method itself as '_view',
+        # first look there
         method_view = getattr(mapped_method, '_view', None)
 
         # or the controller has a default view property
@@ -140,7 +144,8 @@ class BaseController(object):
             view.reset(request)
 
         else:
-            raise Exception("Invalid view argument %s, must extend BaseView" % method_view)
+            raise Exception(
+                "Invalid view argument %s, must extend BaseView" % method_view)
 
         return view
 
@@ -154,12 +159,14 @@ class BaseController(object):
             return None
 
         if hasattr(body_param_class, '_model'):
-            body_param = self.build_model_body_payload(request, mapped_method, getattr(body_param_class, '_model'))
+            body_param = self.build_model_body_payload(
+                request, mapped_method, getattr(body_param_class, '_model'))
 
         else:
             body_param = body_param_class()
 
-        provided_fields = [f for f in dir(body_param_class()) if not f.startswith("_")]
+        provided_fields = [f for f in dir(
+            body_param_class()) if not f.startswith("_")]
 
         # just using a basic Payload object, no properties defined
         if not provided_fields:
@@ -171,14 +178,16 @@ class BaseController(object):
         # here our payload class has properties defined, we just grab those
         else:
             for field in provided_fields:
-                # if the field should be ignored, or if it has already been set somehow
+                # if the field should be ignored, or if it has already been set
+                # somehow
                 if field in ignored_fields or getattr(body_param, field, None) is not getattr(body_param_class(), field, None):
                     continue
                 if field in request.payload.keys():
                     setattr(body_param, field, request.payload.get(field))
                 else:
                     # use the Class.prop value as default
-                    setattr(body_param, field, getattr(body_param_class, field))
+                    setattr(body_param, field, getattr(
+                        body_param_class, field))
 
         return body_param
 
@@ -188,8 +197,10 @@ class BaseController(object):
         return body_param
 
     def build_updates_param(self, request, method, kwargs):
-        model_instance = self.get_model_instance(request, method, "_updates_model", "_updates_model_arg", kwargs)
-        self.update_model_instance_with_payload(model_instance, request.payload)
+        model_instance = self.get_model_instance(
+            request, method, "_updates_model", "_updates_model_arg", kwargs)
+        self.update_model_instance_with_payload(
+            model_instance, request.payload)
         updates_model_arg = getattr(method, '_updates_model_arg')
         kwargs[updates_model_arg] = model_instance
 
@@ -206,13 +217,15 @@ class BaseController(object):
                 setattr(model_instance, field.attname, val)
 
     def set_entity_param(self, request, method, kwargs):
-        model_instance = self.get_model_instance(request, method, "_entity_model", "_entity_model_arg", kwargs)
+        model_instance = self.get_model_instance(
+            request, method, "_entity_model", "_entity_model_arg", kwargs)
         if model_instance:
             entity_model_arg = getattr(method, '_entity_model_arg')
             kwargs[entity_model_arg] = model_instance
 
     def set_entities_param(self, request, method, kwargs):
-        queryset = self.get_queryset(request, method, "_queryset_model", "_queryset_model_arg", kwargs)
+        queryset = self.get_queryset(
+            request, method, "_queryset_model", "_queryset_model_arg", kwargs)
         if queryset:
             entity_model_arg = getattr(method, '_queryset_model_arg')
             kwargs[entity_model_arg] = queryset
@@ -273,13 +286,20 @@ class BaseController(object):
 
     def set_query_params_to_kwargs(self, request, method, keyword_args):
         argsppec = inspect.getargspec(method)
-        if not argsppec.defaults:
+        if not argsppec.defaults and not argsppec.keywords:
             return keyword_args
 
-        kwarg_names = argsppec.args[-len(argsppec.defaults):]
-        for name in kwarg_names:
-            if request.GET.get(name) != None:
-                keyword_args[un_camel(name)] = request.GET.get(name)
+        # method signature has a **kwargs type argument, give them everything
+        if argsppec.keywords:
+            for key in request.GET.keys():
+                keyword_args[un_camel(key)] = request.GET.get(key)
+
+        # just provide the specifically designated keyword args
+        else:
+            kwarg_names = argsppec.args[-len(argsppec.defaults):]
+            for name in kwarg_names:
+                if request.GET.get(name) is not None:
+                    keyword_args[un_camel(name)] = request.GET.get(name)
 
         return keyword_args
 

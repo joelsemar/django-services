@@ -1,4 +1,4 @@
-from django.forms import fields, util
+from django.forms import fields, ValidationError
 import json
 
 import datetime
@@ -36,11 +36,11 @@ class JSONFormField(fields.CharField):
         try:
             value = json.dumps(eval(value, json_globals, json_locals), **self.encoder_kwargs)
         except Exception, e: # eval can throw many different errors
-            raise util.ValidationError('%s (Caught "%s")' % (self.help_text, e))
+            raise ValidationError('%s (Caught "%s")' % (self.help_text, e))
 
         try:
             json.loads(value, **self.decoder_kwargs)
         except ValueError, e:
-            raise util.ValidationError('%s (Caught "%s")' % (self.help_text, e))
+            raise ValidationError('%s (Caught "%s")' % (self.help_text, e))
 
         return value
