@@ -150,13 +150,15 @@ class BaseController(object):
         return view
 
     def build_body_param(self, request, mapped_method):
-        body_param_class = getattr(mapped_method, '_body_param_class', None)
-        ignored_fields = getattr(body_param_class, '_ignores', [])
-        if not body_param_class:
-            return None
 
         if not request.payload:
             return None
+        body_param_class = getattr(mapped_method, '_body_param_class', None)
+
+        if not body_param_class:
+            return None
+
+        ignored_fields = getattr(body_param_class, '_ignores', [])
 
         if hasattr(body_param_class, '_model'):
             body_param = self.build_model_body_payload(

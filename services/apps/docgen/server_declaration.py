@@ -55,16 +55,19 @@ class ServerDeclaration():
                            'return_vals': self._get_return_vals(docstring), }
 
             if hasattr(method, '_body_param_class'):
-                method_dict['body_param_class'] = getattr(method, '_body_param_class').__name__
-                method_dict['test_payload'] = self.create_test_payload(getattr(method, '_body_param_class'))
-
+                method_dict['body_param_class'] = getattr(
+                    method, '_body_param_class').__name__
+                method_dict['test_payload'] = self.create_test_payload(
+                    getattr(method, '_body_param_class'))
 
             view = getattr(method, '_view', getattr(handler, 'view', None))
             if view:
 
                 if hasattr(view, 'auto_page') and getattr(view, 'paging', False):
-                    method_dict['params'].append({'name': 'page_number', 'type': 'int', 'comment': "Page number"})
-                    method_dict['params'].append({'name': 'limit', 'type': 'int', 'comment': "Page Size"})
+                    method_dict['params'].append(
+                        {'name': 'page_number', 'type': 'int', 'comment': "Page number"})
+                    method_dict['params'].append(
+                        {'name': 'limit', 'type': 'int', 'comment': "Page Size"})
 
             ret.append(method_dict)
 
@@ -72,12 +75,15 @@ class ServerDeclaration():
 
     def _get_method_api_handler(self, docstring):
 
-        api_handler = re.search(r'api handler\:? (?P<method>post|put|get|delete)[\ ](?P<url>.+)', docstring, flags=re.IGNORECASE)
+        api_handler = re.search(
+            r'api handler\:? (?P<method>post|put|get|delete)[\ ](?P<url>.+)', docstring, flags=re.IGNORECASE)
         if api_handler:
             ret = api_handler.groupdict()
-            comment = re.search(r'^(?P<comment>.*)api handler', docstring, flags=re.IGNORECASE | re.DOTALL)
+            comment = re.search(r'^(?P<comment>.*)api handler',
+                                docstring, flags=re.IGNORECASE | re.DOTALL)
             if comment:
-                ret['comment'] = comment.groupdict()['comment'].replace('\n', '<br/>')
+                ret['comment'] = comment.groupdict(
+                )['comment'].replace('\n', '<br/>')
             return ret
         return {}
 
@@ -94,15 +100,18 @@ class ServerDeclaration():
         if not docstring:
             return ret
 
-        params = re.findall(regex, docstring.split('Returns:')[idx], flags=re.MULTILINE | re.DOTALL)
+        params = re.findall(regex, docstring.split('Returns:')[
+                            idx], flags=re.MULTILINE | re.DOTALL)
         if params:
-            params = [f.strip() for f in re.split(split_regex, params[0]) if f.strip()]
+            params = [f.strip() for f in re.split(
+                split_regex, params[0]) if f.strip()]
         for param in params:
             ret.append(self._get_dict_from_var_declaration(param))
         return ret
 
     def _get_dict_from_var_declaration(self, declaration):
-        param = re.search(r'^(?P<name>[\w]+)[\ ]+\[(?P<type>[\w\[\]]+)\][\ ]*(?P<comment>.*)', declaration, flags=re.DOTALL)
+        param = re.search(
+            r'^(?P<name>[\w]+)[\ ]+\[(?P<type>[\w\[\]]+)\][\ ]*(?P<comment>.*)', declaration, flags=re.DOTALL)
         if not param:
             return {}
         param = param.groupdict()
@@ -122,7 +131,8 @@ class ServerDeclaration():
             ret.update(self.create_model_payload(body_param_class))
 
         elif hasattr(body_param_class, '_model'):
-            ret.update(self.create_model_payload(getattr(body_param_class, '_model')))
+            ret.update(self.create_model_payload(
+                getattr(body_param_class, '_model')))
 
         for prop in dir(body_param_class):
             if not prop.startswith("_") and prop not in hidden_fields and not ret.get(prop):
