@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from django.conf import settings
 from django.core.paginator import EmptyPage, Paginator
 from services.utils import camel_dict
+from services.payload import Payload
 
 JSON_INDENT = 4
 
@@ -190,9 +191,10 @@ class ListView(BaseView):
 
 class ModelView(BaseView):
 
-    excluded = ()
-    fields = ()
-    extra_fields = ()
+    # whitelist fields to render
+    _fields = ()
+    # blacklist fields to render
+    _hides = ()
 
     def should_render(self, request):
         return self.instance
@@ -201,8 +203,8 @@ class ModelView(BaseView):
 
         ret = {}
 
-        if self.fields:
-            for field in self.fields:
+        if self._fields:
+            for field in self._fields:
                 ret[field] = getattr(self.instance, field)
 
         else:
@@ -212,12 +214,8 @@ class ModelView(BaseView):
             for key, value in self.instance.__dict__.items():
                 if not key.startswith('_'):
                     ret[key] = value
-
-            for field in self.excluded:
-                del ret[field]
-
-            for field in self.extra_fields:
-                ret[field] = getattr(self.instance, field)
+            for field in self._hides:
+                ret.pop(field, None)
 
         return ret
 

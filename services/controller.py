@@ -11,7 +11,7 @@ from django.db.models.fields import DateTimeField, DateField
 
 from services.utils import generic_exception_handler, un_camel_dict, un_camel, default_time_parse
 from services.view import BaseView
-from services.models import ModelDTO
+from services.payload import Payload
 try:
     from services.apps.ops import tasks as ops_tasks
 except:
@@ -158,45 +158,8 @@ class BaseController(object):
         if not body_param_class:
             return None
 
-        ignored_fields = getattr(body_param_class, '_ignores', [])
-
-        if hasattr(body_param_class, '_model'):
-            body_param = self.build_model_body_payload(
-                request, mapped_method, getattr(body_param_class, '_model'))
-
-        else:
-            body_param = body_param_class()
-
-        provided_fields = [f for f in dir(
-            body_param_class()) if not f.startswith("_")]
-
-        # just using a basic Payload object, no properties defined
-        if not provided_fields:
-            for key, value in request.payload.items():
-                if key in ignored_fields or getattr(body_param, key, None) is not None:
-                    continue
-                setattr(body_param, key, value)
-
-        # here our payload class has properties defined, we just grab those
-        else:
-            for field in provided_fields:
-                # if the field should be ignored, or if it has already been set
-                # somehow
-                if field in ignored_fields or getattr(body_param, field, None) is not getattr(body_param_class(), field, None):
-                    continue
-                if field in request.payload.keys():
-                    setattr(body_param, field, request.payload.get(field))
-                else:
-                    # use the Class.prop value as default
-                    setattr(body_param, field, getattr(
-                        body_param_class, field))
-
-        return body_param
-
-    def build_model_body_payload(self, request, mapped_method, body_param_class):
-        body_param = body_param_class()
-        self.update_model_instance_with_payload(body_param, request.payload)
-        return body_param
+        payload = Payload(body_param_class, request.payload)
+        return payload.to_obj()
 
     def build_updates_param(self, request, method, kwargs):
         model_instance = self.get_model_instance(

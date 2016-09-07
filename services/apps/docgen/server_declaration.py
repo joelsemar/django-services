@@ -2,13 +2,11 @@ import re
 import os
 import importlib
 import json
-import inspect
 from services.controller import BaseController
-from services.views import PagingQuerySetView
 from django.conf import settings
 from django.db.models.fields import NOT_PROVIDED as DEFAULT_NOT_PROVIDED
-from django.db.models import Model as DjangoModel
 from services.models import BaseModel
+from services.payload import Payload
 
 # VAR_REGEX = r'^[@][\w]+\ \[[\w\[\]]+\]\ .+' # @parameter [type] some comment
 VAR_REGEX = r'^[\s\t\ ]+\@.+'
@@ -124,47 +122,7 @@ class ServerDeclaration():
         return param
 
     def create_test_payload(self, body_param_class):
-        ret = {}
-        hidden_fields = getattr(body_param_class, '_hides', [])
-
-        if DjangoModel in inspect.getmro(body_param_class):
-            ret.update(self.create_model_payload(body_param_class))
-
-        elif hasattr(body_param_class, '_model'):
-            ret.update(self.create_model_payload(
-                getattr(body_param_class, '_model')))
-
-        for prop in dir(body_param_class):
-            if not prop.startswith("_") and prop not in hidden_fields and not ret.get(prop):
-                ret[prop] = getattr(body_param_class, prop)
-
-        for f in hidden_fields:
-            if ret.get(f) is not None:
-                del ret[f]
-        return json.dumps(ret, indent=4)
-
-    def create_model_payload(self, django_model):
-        ret = {}
-        hidden_fields = getattr(django_model, '_hides', [])
-        for field in django_model._meta.fields:
-            field_name = field.name
-            if field.primary_key:
-                continue
-
-            if field_name in [f.name for f in BaseModel._meta.fields]:
-                continue
-
-            if field_name in hidden_fields:
-                continue
-
-            default = field.default
-            if default == DEFAULT_NOT_PROVIDED or default == '':
-                ret[field_name] = ""
-
-            elif not hasattr(field.default, '__call__'):
-                ret[field_name] = field.default
-
-        return ret
+        return Payload(body_param_class).create_test_payload()
 
     def crawl_urls(self):
         ret = []
