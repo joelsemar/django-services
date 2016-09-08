@@ -15,7 +15,7 @@ class Payload(dict):
         # whitelist for input fields
         self.allowed_fields = getattr(dto_class, "_allowed", [])
 
-        self.django_model = getattr(dto_class, "_model")
+        self.django_model = getattr(dto_class, "_model", None)
         if getattr(dto_class, "_hidden_and_ignored", []):
             for field in getattr(dto_class, "_hidden_and_ignored"):
                 self.hidden_fields.append(field)
@@ -28,14 +28,16 @@ class Payload(dict):
             inst = dto_class()
             provided_fields = [f for f in dir(inst) if not f.startswith("_") and not callable(f)]
             for field in provided_fields:
-                ret[field] = payload.get(field)
+                if payload is not None:
+                    ret[field] = payload.get(field)
+                else:
+                    ret[field] = getattr(inst, field, "")
 
         for key, value in ret.iteritems():
             if key in self.ignored_fields:
                 continue
             if self.allowed_fields and key not in self.allowed_fields:
                 continue
-            print "setting %s: %s" % (key, value)
             self.payload[key] = value
 
         super(Payload, self).__init__(**self.payload)

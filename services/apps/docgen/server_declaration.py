@@ -52,11 +52,10 @@ class ServerDeclaration():
                            'params': self._get_method_params(docstring), 'auth_required': auth_required,
                            'return_vals': self._get_return_vals(docstring), }
 
-            if hasattr(method, '_body_param_class'):
-                method_dict['body_param_class'] = getattr(
-                    method, '_body_param_class').__name__
-                method_dict['test_payload'] = self.create_test_payload(
-                    getattr(method, '_body_param_class'))
+            body_param_class = getattr(method, "_body_param_class", None)
+            if body_param_class is not None:
+                method_dict['body_param_class'] = body_param_class.__name__
+                method_dict['test_payload'] = self.create_test_payload(body_param_class)
 
             view = getattr(method, '_view', getattr(handler, 'view', None))
             if view:

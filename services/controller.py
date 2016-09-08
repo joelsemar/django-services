@@ -54,6 +54,7 @@ class BaseController(object):
             if self.has_body_param(mapped_method):
                 body_param = self.build_body_param(request, mapped_method)
                 if body_param:
+                    request.body_param = body_param
                     args = self.insert_into_arglist(args, body_param)
 
             if self.has_updates_param(mapped_method):
@@ -164,10 +165,23 @@ class BaseController(object):
     def build_updates_param(self, request, method, kwargs):
         model_instance = self.get_model_instance(
             request, method, "_updates_model", "_updates_model_arg", kwargs)
+
         self.update_model_instance_with_payload(
             model_instance, request.payload)
         updates_model_arg = getattr(method, '_updates_model_arg')
         kwargs[updates_model_arg] = model_instance
+
+    def update_model_instance_with_body_param(self, model_instance, body_param):
+        if model_instance and body_param:
+            for field in model_instance._meta.fields:
+                if field.primary_key:
+                    continue
+                if field.attname not in dir(body_param) and field.name not in dir(body_param):
+                    continue
+                val = getattr(body_param, field.name, getattr(body_param, field.attname))
+                if field.__class__ in (DateTimeField, DateField):
+                    val = default_time_parse(val)
+                setattr(model_instance, field.attname, val)
 
     def update_model_instance_with_payload(self, model_instance, payload):
         if model_instance and payload:
