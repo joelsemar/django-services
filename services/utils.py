@@ -129,7 +129,10 @@ def generic_exception_handler(request, exception):
     response.add_errors(error)
     logger = logging.getLogger('default')
     logger.error(error_header + error)
-    transaction.rollback()
+    try:
+        transaction.rollback()
+    except Exception as e:
+        print "Error rolling back: " + e.message
 
     return response.serialize()
 
@@ -212,7 +215,6 @@ def str_to_bool(str):
     if str is None:
         return False
     return str.lower() in ['1', 'true', 't', 'y', 'yes']
-
 
 
 def isDirty(model, field_name):
@@ -300,8 +302,6 @@ def direct_to_template(template, context={}):
     return lambda request: render(request, template, context)
 
 
-class Payload(object):
-    pass
 
 
 first_cap_re = re.compile('(.)([A-Z][a-z]+)')

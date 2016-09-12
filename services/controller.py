@@ -108,6 +108,10 @@ class BaseController(object):
 
     def build_payload(self, request):
         request.payload = {}
+
+        if request.method == "GET":
+            return
+
         content_type = request.META.get("CONTENT_TYPE", "application/json")
         if content_type == 'application/json':
             try:

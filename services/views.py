@@ -214,7 +214,7 @@ class ModelView(BaseView):
             for key, value in self.instance.__dict__.items():
                 if not key.startswith('_'):
                     ret[key] = value
-                    
+
         for field in self._hides:
             ret.pop(field, None)
 
