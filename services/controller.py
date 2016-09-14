@@ -223,7 +223,7 @@ class BaseController(object):
             model_arg = getattr(method, arg_type)
             try:
                 if kwargs.get(model_arg):
-                    return model_class.objects.get(id=kwargs[model_arg])
+                    return model_class.objects.get(pk=kwargs[model_arg])
                 else:
                     return model_class.objects.get(user=request.user)
             except ObjectDoesNotExist:
