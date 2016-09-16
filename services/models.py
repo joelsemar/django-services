@@ -42,6 +42,30 @@ class BaseModel(models.Model, BaseModelMixin):
 
     class Meta:
         abstract = True
+        
+    def __str__(self):
+        d = []
+
+        for field in self.__class__._meta.fields:
+            field_name = field.name
+            if field.primary_key:
+                continue
+            if field_name in [f.name for f in BaseModel._meta.fields]:
+                continue
+            if isinstance(field, (TextField, ForeignKey, JSONField)):
+                continue
+            d.append(getattr(self, field_name))
+
+        return ", ".join([str(val) for val in d])
+
+    @property
+    def dict(self):
+        ret = self.__dict__
+        return dict((k, v) for k, v in ret.items() if not k.startswith('_'))
+
+    def save(self, *args, **kwargs):
+        self.last_modified = datetime.utcnow()
+        super(BaseModel, self).save(*args, **kwargs)
 
 
 class ModelDTO(object):
