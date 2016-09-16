@@ -24,7 +24,7 @@ class Payload(dict):
         if self.django_model is not None:
             ret = self.get_allowed_model_payload(payload)
         else:
-            # just a pojo dto, look at the proprties
+            # just a `popo` dto, look at the proprties
             # and try and build a payload based on that
             inst = dto_class()
             provided_fields = [f for f in dto_class.__dict__.keys() if not f.startswith("_") and not

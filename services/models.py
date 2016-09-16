@@ -1,23 +1,16 @@
 from datetime import datetime
 from django.conf import settings
+from django.db.models.fields import TextField
+from django.db.models.fields.related import ForeignKey
+from django.contrib.postgres.fields.jsonb import JSONField
 
 if 'gis.db' in settings.DATABASES.get('default', {}).get('ENGINE', ''):
     from django.contrib.gis.db import models
 else:
     from django.db import models
 
-from django.db.models.fields import TextField
-from django.db.models.fields.related import ForeignKey
-from django.contrib.postgres.fields.jsonb import JSONField
 
-
-class BaseModel(models.Model):
-    created_date = models.DateTimeField(default=datetime.utcnow, db_index=True)
-    last_modified = models.DateTimeField(default=datetime.utcnow, db_index=True)
-
-    class Meta:
-        abstract = True
-
+class BaseModelMixin(object):
     def __str__(self):
         d = []
 
@@ -41,6 +34,14 @@ class BaseModel(models.Model):
     def save(self, *args, **kwargs):
         self.last_modified = datetime.utcnow()
         super(BaseModel, self).save(*args, **kwargs)
+
+
+class BaseModel(models.Model, BaseModelMixin):
+    created_date = models.DateTimeField(default=datetime.utcnow, db_index=True)
+    last_modified = models.DateTimeField(default=datetime.utcnow, db_index=True)
+
+    class Meta:
+        abstract = True
 
 
 class ModelDTO(object):

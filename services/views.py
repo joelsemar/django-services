@@ -202,7 +202,6 @@ class ModelView(BaseView):
     def render(self, request):
 
         ret = {}
-
         if self._fields:
             for field in self._fields:
                 ret[field] = getattr(self.instance, field)

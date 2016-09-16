@@ -52,7 +52,7 @@ class ServerDeclaration():
                            'params': self._get_method_params(docstring), 'auth_required': auth_required,
                            'return_vals': self._get_return_vals(docstring), }
 
-            body_param_class = getattr(method, "_body_param_class", None)
+            body_param_class = getattr(method, "_body_param_class", getattr(method, "_updates_model", None))
             if body_param_class is not None:
                 method_dict['body_param_class'] = body_param_class.__name__
                 method_dict['test_payload'] = self.create_test_payload(body_param_class)

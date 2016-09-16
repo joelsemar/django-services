@@ -156,8 +156,9 @@ class BaseController(object):
 
     def build_body_param(self, request, mapped_method):
 
-        if not request.payload:
+        if not getattr(request, 'payload', None):
             return None
+
         body_param_class = getattr(mapped_method, '_body_param_class', None)
 
         if not body_param_class:
@@ -167,25 +168,23 @@ class BaseController(object):
         return payload.to_obj()
 
     def build_updates_param(self, request, method, kwargs):
+        if not getattr(request, 'payload', None):
+            return None
+
+        model_class = getattr(method, "_updates_model")
+
+        updates_model_arg = getattr(method, '_updates_model_arg', None)
+
         model_instance = self.get_model_instance(
-            request, method, "_updates_model", "_updates_model_arg", kwargs)
+            request, method, model_class, updates_model_arg, kwargs)
+
+        cleaned_payload = Payload(model_class, request.payload)
 
         self.update_model_instance_with_payload(
-            model_instance, request.payload)
-        updates_model_arg = getattr(method, '_updates_model_arg')
-        kwargs[updates_model_arg] = model_instance
+            model_instance, cleaned_payload)
 
-    def update_model_instance_with_body_param(self, model_instance, body_param):
-        if model_instance and body_param:
-            for field in model_instance._meta.fields:
-                if field.primary_key:
-                    continue
-                if field.attname not in dir(body_param) and field.name not in dir(body_param):
-                    continue
-                val = getattr(body_param, field.name, getattr(body_param, field.attname))
-                if field.__class__ in (DateTimeField, DateField):
-                    val = default_time_parse(val)
-                setattr(model_instance, field.attname, val)
+        if updates_model_arg:
+            kwargs[updates_model_arg] = model_instance
 
     def update_model_instance_with_payload(self, model_instance, payload):
         if model_instance and payload:
@@ -200,10 +199,14 @@ class BaseController(object):
                 setattr(model_instance, field.attname, val)
 
     def set_entity_param(self, request, method, kwargs):
+        model_class = getattr(method, "_entity_model")
+
+        entity_model_arg = getattr(method, '_entity_model_arg', None)
+
         model_instance = self.get_model_instance(
-            request, method, "_entity_model", "_entity_model_arg", kwargs)
+            request, method, model_class, entity_model_arg, kwargs)
+
         if model_instance:
-            entity_model_arg = getattr(method, '_entity_model_arg')
             kwargs[entity_model_arg] = model_instance
 
     def set_entities_param(self, request, method, kwargs):
@@ -213,21 +216,29 @@ class BaseController(object):
             entity_model_arg = getattr(method, '_queryset_model_arg')
             kwargs[entity_model_arg] = queryset
 
-    def get_model_instance(self, request, method, model_arg_type, arg_type, kwargs):
-        if hasattr(method, model_arg_type):
-            model_class = getattr(method, model_arg_type)
+    def get_model_instance(self, request, method, model_class, model_arg, kwargs):
+        """
+        model_class -> the django model class
 
-            if hasattr(model_class, '_model'):
-                model_class = getattr(model_class, '_model')
+        model_arg ->  this is the optional keyword argument used to lookup the model instance
+        for example in GET /foo/(?P<foo_id>[\d]) django will provide a kwarg of "foo_id",
+        We'll fetch that from the kwargs and try to fetch the model via pk=<foo_id>
+        """
 
-            model_arg = getattr(method, arg_type)
-            try:
-                if kwargs.get(model_arg):
-                    return model_class.objects.get(pk=kwargs[model_arg])
-                else:
-                    return model_class.objects.get(user=request.user)
-            except ObjectDoesNotExist:
-                raise EntityNotFoundException(model_arg + " not found.")
+        if hasattr(model_class, '_model'):
+            model_class = getattr(model_class, '_model')
+
+        try:
+            if kwargs.get(model_arg):
+                return model_class.objects.get(pk=kwargs[model_arg])
+            elif model_arg == "user":
+                # no kwarg, maybe trying to operate on current user?
+                return request.user
+            else:
+                # fallback to trying to operate on a single object with one to one with user
+                return model_class.objects.get(user=request.user)
+        except ObjectDoesNotExist:
+            raise EntityNotFoundException(model_arg + " not found.")
 
     def get_queryset(self, request, method, model_arg_type, arg_type, kwargs):
         if hasattr(method, model_arg_type):
@@ -239,12 +250,6 @@ class BaseController(object):
                 return model_class.objects.filter(id=kwargs[model_arg])
             else:
                 return model_class.objects.filter(user=request.user)
-
-    def get_django_model_from_mro(self, dto_class):
-        bases = inspect.getmro(dto_class)
-        for cls in bases:
-            if isinstance(cls, DjangoModel):
-                return cls
 
     def fix_delete_and_put(self, request):
         if request.method == "PUT":
@@ -294,7 +299,7 @@ class BaseController(object):
 
     def auth_check(self, request, method):
         if not hasattr(method, '_unauthenticated') and not request.user.is_authenticated():
-            response = self.view(request)
+            response = BaseView(request)
             return response.add_errors('401 -- Unauthorized', status=401).serialize()
 
     def has_body_param(self, method):
