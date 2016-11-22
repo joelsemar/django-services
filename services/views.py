@@ -182,11 +182,11 @@ class ListView(BaseView):
         return instance.dict
 
     def render(self, request):
-        ret = {}
-        for key, value in self._data.items():
-            if isinstance(value, (list, tuple)):
-                ret[key] = [self.dict(d) for d in value]
-        return ret
+        return self.list
+
+    @property
+    def list(self):
+        return self._data.get('list', None)
 
 
 class ModelView(BaseView):

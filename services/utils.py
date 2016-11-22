@@ -162,7 +162,7 @@ def default_time_parse(time_string):
     Returns None on error
     """
     formats = ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S.%f",
-               "%Y-%m-%d", "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S")
+               "%Y-%m-%d", "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%fZ")
 
     if not time_string or not isinstance(time_string, basestring):
         return None
@@ -300,8 +300,6 @@ def flat_earth_distance(lng1, lat1, lng2, lat2):
 
 def direct_to_template(template, context={}):
     return lambda request: render(request, template, context)
-
-
 
 
 first_cap_re = re.compile('(.)([A-Z][a-z]+)')
