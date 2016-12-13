@@ -38,7 +38,7 @@
         <br/>
         <form class="newTestForm" id="{{handler.name}}{{method.request_method}}_form" role="form" style="width:40%">
             <input type="text" class="form-control" id="{{handler.name}}{{method.request_method}}_url" size=30 value="{{method.url}}"><br/>
-            {% if method.body_param_class %}
+            {% if method.body_param_class and not method.params %}
                 <textarea name="body" rows=15 cols=50>{{method.test_payload}}</textarea><br/>
                 <div class="jsonlintError"> Error spot</div>
             {% endif %}
