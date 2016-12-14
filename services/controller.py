@@ -257,11 +257,11 @@ class BaseController(object):
             request.request_id = request.PUT.get('request_id')
             request.POST = QueryDict({})
 
-        if request.method == "DELETE":
-            request.DELETE = QueryDict(request.body)
-            if not request.DELETE.keys():
-                request.DELETE = QueryDict(request.META['QUERY_STRING'])
-                request.POST = QueryDict({})
+       # if request.method == "DELETE" and request.body:
+       #     request.DELETE = QueryDict(request.body)
+       #     if not request.DELETE.keys():
+       #         request.DELETE = QueryDict(request.META['QUERY_STRING'])
+       #         request.POST = QueryDict({})
 
     def get_mapped_method(self, request):
         request_method = request.method.upper()
