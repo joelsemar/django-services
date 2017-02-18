@@ -113,7 +113,7 @@ class BaseController(object):
             return
 
         content_type = request.META.get("CONTENT_TYPE", "application/json")
-        if content_type == 'application/json':
+        if 'application/json' in content_type:
             try:
                 request.payload = json.loads(request.body)
             except Exception as e:

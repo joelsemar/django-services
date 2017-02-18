@@ -22,7 +22,10 @@ class BaseModelMixin(object):
                 continue
             if isinstance(field, (TextField, ForeignKey, JSONField)):
                 continue
-            d.append(getattr(self, field_name))
+            value = getattr(self, field_name)
+            if isinstance(value, unicode):
+                value = unicode.encode('utf-8')
+            d.append(value)
 
         return ", ".join([str(val) for val in d])
 
@@ -42,7 +45,7 @@ class BaseModel(models.Model, BaseModelMixin):
 
     class Meta:
         abstract = True
-        
+
     def __str__(self):
         d = []
 
@@ -54,7 +57,10 @@ class BaseModel(models.Model, BaseModelMixin):
                 continue
             if isinstance(field, (TextField, ForeignKey, JSONField)):
                 continue
-            d.append(getattr(self, field_name))
+            value = getattr(self, field_name)
+            if isinstance(value, unicode):
+                value = unicode.encode('utf-8')
+            d.append(value)
 
         return ", ".join([str(val) for val in d])
 
