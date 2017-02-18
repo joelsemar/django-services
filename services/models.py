@@ -24,7 +24,7 @@ class BaseModelMixin(object):
                 continue
             value = getattr(self, field_name)
             if isinstance(value, unicode):
-                value = unicode.encode('utf-8')
+                value = value.encode('utf-8')
             d.append(value)
 
         return ", ".join([str(val) for val in d])
@@ -59,7 +59,7 @@ class BaseModel(models.Model, BaseModelMixin):
                 continue
             value = getattr(self, field_name)
             if isinstance(value, unicode):
-                value = unicode.encode('utf-8')
+                value = value.encode('utf-8')
             d.append(value)
 
         return ", ".join([str(val) for val in d])
