@@ -5,7 +5,6 @@ import inspect
 from importlib import import_module
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseNotAllowed, QueryDict
-from django.db.models import Model as DjangoModel
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.fields import DateTimeField, DateField
 
@@ -110,6 +109,10 @@ class BaseController(object):
         request.payload = {}
 
         if request.method == "GET":
+            return
+
+        content_length = request.META.get("CONTENT_LENGTH")
+        if content_length is None or content_length == "0":
             return
 
         content_type = request.META.get("CONTENT_TYPE", "application/json")
